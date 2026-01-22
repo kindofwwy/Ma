@@ -1,7 +1,7 @@
 delegate Op MaFunc(Op op);
 delegate object Dya(int a,int b);
 delegate object DyaStr(string a,string b);
-delegate object MonStr(object a);
+delegate object MonStr(string a);
 static class Lib
 {
     public static Dictionary<string,MaFunc> lib;
@@ -13,6 +13,7 @@ static class Lib
         lib["def"]=def;
         lib["call"]=call;
         lib["if"]=If;
+        //lambda (lam args body)
         lib["+"]=Dyadic((int x,int y)=>x+y);
         lib["-"]=Dyadic((int x,int y)=>x-y);
         lib["*"]=Dyadic((int x,int y)=>x*y);
@@ -21,7 +22,14 @@ static class Lib
         lib["<"]=Dyadic((int x,int y)=>x<y);
         lib["="]=Dyadic((string x,string y)=>x==y);
         lib["!="]=Dyadic((string x,string y)=>x!=y);
+        lib["and"]=Dyadic((string x,string y)=>x==true.ToString()&&y==true.ToString());
+        lib["or"]=Dyadic((string x,string y)=>x==true.ToString()||y==true.ToString());
+        lib["not"]=Mono((string x)=>{if(x==true.ToString())return false;else return true;});
+
         lib["cat"]=Dyadic((string x,string y)=>x+y);
+        lib["len"]=Mono((string x)=>x.Length);
+        lib["at"]=At;
+
         lib["eq"]=AllEq;
         lib["rp"]=Replace;
         
@@ -120,8 +128,21 @@ static class Lib
         return dya;
     }
 
+    static MaFunc Mono(MonStr func)
+    {
+        Op mon(Op op)
+        {
+            if(op.inp.Length<1) Log.ExcepWrongParaNum(op,1);
+            Op d=new Op();
+            d.name=func(op.inp[0].name).ToString() ?? "none";
+            return d;
+        }
+        return mon;
+    }
+
     static Op AllEq(Op op)
     {
+        if(op.inp.Length<2) Log.ExcepWrongParaNum(op,2);
         Op a=op.inp[0];
         Op b=op.inp[1];
         Op d=new Op();
@@ -259,6 +280,21 @@ static class Lib
         select(target,args,ref be,content);
 
         return be;
+    }
+
+    static Op At(Op op)
+    {
+        if (op.inp.Length<2) Log.ExcepWrongParaNum(op,2);
+        string name=op.inp[0].name;
+        if(int.TryParse(op.inp[1].name,out int inde))
+        {
+            return new Op(){name=name[inde].ToString()};
+        }
+        else
+        {
+            Log.Excep(op,$"except int,but {op.inp[1]}");
+            return op;
+        }
     }
 
 }
