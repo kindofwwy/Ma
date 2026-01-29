@@ -243,7 +243,7 @@ static class Lib
                 }
                 else
                 {
-                    content.Replace(new Op(){name=args[i]},assumeArgs[i].Value);
+                    content.ReplaceOnly(new Op(){name=args[i]},assumeArgs[i].Value);
                 }
             }
             be.ShallowCopyToThis(content);
