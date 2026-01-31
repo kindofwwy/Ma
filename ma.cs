@@ -193,58 +193,39 @@ struct Op
         }
     }
 
-    public void ExecuteStep(int deep=0)
+    public bool ExecuteStep()
     {
-        while (inp != null && HasDefine())
+        if (inp != null && HasDefine())
         {
-            if (name=="def" || name=="eq" || name=="rp") Explain();
+            if (name=="def" || name=="eq" || name=="rp") 
+            {
+                Explain();
+                return true;
+            }
             else if (name == "if")
             {
-                inp[0].ExecuteStep(deep+1);
-                Explain();
+                if(!inp[0].ExecuteStep())
+                    Explain();
+                return true;
             }
             else
             {
                 for(int i = 0; i < inp.Length; ++i)
                 {
-                    inp[i].ExecuteStep(deep+1);
+                    if (inp[i].ExecuteStep())
+                    {
+                        return true;
+                    }
                 }
                 Explain();
-            }
-            if (deep == 0)
-            {
-                break;
+                return true;
             }
         }
+        else
+        {
+            return false;
+        }
     }
-
-    // public IEnumerable<Op> ExecuteSingleStep()
-    // {
-    //     while (inp != null && HasDefine())
-    //     {
-    //         if (name=="def" || name=="eq" || name == "rp")
-    //         {
-    //             Explain();
-    //             yield return this;
-    //         } 
-    //         else if (name == "if")
-    //         {
-    //             inp[0].ExecuteSingleStep();
-    //             Explain();
-    //             yield return this;
-    //         }
-    //         else
-    //         {
-    //             for(int i = 0; i < inp.Length; ++i)
-    //             {
-    //                 inp[i].ExecuteSingleStep();
-    //             }
-    //             Explain();
-    //             yield return this;
-    //         }
-            
-    //     }
-    // }
 
     public void ExpDic()
     {
@@ -288,7 +269,7 @@ struct Op
     {
         if (!isNeedAlpha(target))
         {
-           if (name == target.name)
+            if (name == target.name)
             {
                 if (inp == null)
                 {
@@ -312,6 +293,10 @@ struct Op
                     {
                         name=content.name;
                     }
+                    for(int i = 0; i < inp.Length; ++i)
+                    {
+                        inp[i].Replace(target,content);
+                    } 
                 }
             }
             else
@@ -323,8 +308,7 @@ struct Op
                         inp[i].Replace(target,content);
                     } 
                 }
-                
-            } 
+            }
         }
     }
 
