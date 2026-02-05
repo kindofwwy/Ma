@@ -61,14 +61,33 @@ static class Ma
         return output;
     }
 
-    public static string CutSharp(string code)
+    static string CutHeadTail(string code)
     {
-        return code.Substring(0,code.IndexOf('#'));
+        int start=0;
+        int end=code.Length-1;
+        for(int i = start; i < code.Length; ++i)
+        {
+            if(!Array.Exists<char>(separator,(char x) => x == code[i]))
+            {
+                start=i;
+                break;
+            }
+        }
+        for(int i = end; i >= 0; --i)
+        {
+            if(!Array.Exists<char>(separator,(char x) => x == code[i]))
+            {
+                end=i;
+                break;
+            }
+        }
+        return code.Substring(start,end-start+1);
     }
 
     public static Op Parse(string code)    //(* (+ 1 2) (- 3 (/ 4 5)))
     {
         Op op=new Op();
+        code=CutHeadTail(code);
         if (code[0] == '(' && code[code.Length - 1] == ')')
         {
             List<string> codes=Cut(code);
@@ -152,6 +171,7 @@ struct Op
     public string name;
     public Op[]? inp;
     public static Dictionary<string, (Op[],Op)> defines=new Dictionary<string, (Op[],Op)>();    //formInp,define
+    static string[] NoCallSub=["def","eq","rp","len"];
 
     public Op()
     {
@@ -161,6 +181,12 @@ struct Op
     public bool HasDefine()
     {
         return defines.ContainsKey(name)||Lib.lib.ContainsKey(name);
+    }
+
+    bool isNoCallSub()
+    {
+        string name=this.name;
+        return Array.Exists<string>(NoCallSub,(string x)=>x==name);
     }
 
     public void Explain()
@@ -175,10 +201,15 @@ struct Op
     {
         while (inp != null && HasDefine())
         {
-            if (name=="def" || name=="eq" || name=="rp") Explain();
+            if (isNoCallSub()) Explain();
             else if (name == "if")
             {
                 inp[0].Execute();
+                Explain();
+            }
+            else if (name == "append" || name == "at")
+            {
+                inp[1].Execute();
                 Explain();
             }
             else
@@ -197,7 +228,7 @@ struct Op
     {
         if (inp != null && HasDefine())
         {
-            if (name=="def" || name=="eq" || name=="rp") 
+            if (isNoCallSub()) 
             {
                 Explain();
                 return true;
@@ -205,6 +236,12 @@ struct Op
             else if (name == "if")
             {
                 if(!inp[0].ExecuteStep())
+                    Explain();
+                return true;
+            }
+            else if (name == "append" || name == "at")
+            {
+                if(!inp[1].ExecuteStep())
                     Explain();
                 return true;
             }
@@ -434,17 +471,68 @@ struct Op
         }
     }
 
-    public void show(int deep=0)
+    static ConsoleColor[] colors=[ConsoleColor.Cyan,ConsoleColor.Magenta,ConsoleColor.Yellow];
+    public void show(int deep=0,int lastcount=0,bool islast=false)
     {
         for(int i = 0; i < deep; ++i)
         {
             Console.Write("     ");
         }
-        Console.WriteLine(name);
-        if(inp!=null)
-        for(int i = 0; i < inp.Length; ++i)
+        Console.ForegroundColor=colors[deep%colors.Length];
+        if (isnosub())
         {
-            inp[i].show(deep+1);
+            Console.Write(this);
+        }
+        else if(inp != null)
+        {
+            Console.Write("(");
+        }
+        if(isnosub() && islast)
+        {
+            for(int i = 0; i < lastcount; ++i)
+            {
+                Console.ForegroundColor=colors[(deep-i-1)%colors.Length];
+                Console.Write(")");
+            }
+        }
+        if (isnosub())
+        {
+            Console.Write("\n");
+        }
+        else
+        {
+            Console.WriteLine(name);
+
+            if (inp != null)
+            {
+                for(int i = 0; i < inp.Length; ++i)
+                {
+                    if (i == inp.Length - 1)
+                    {
+                        inp[i].show(deep+1,lastcount+1,true);
+                    }
+                    else
+                    {
+                        inp[i].show(deep+1,0,false);
+                    }
+                    
+                }
+            }
+        }
+        
+        
+    }
+
+    bool isnosub()
+    {
+        if(inp==null)  return true;
+        else
+        {
+            for(int i = 0; i < inp.Length; ++i)
+            {
+                if(inp[i].inp!=null) return false;
+            }
+            return true;
         }
     }
 }

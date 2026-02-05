@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 delegate Op MaFunc(Op op);
 delegate object Dya(int a,int b);
 delegate object DyaStr(string a,string b);
@@ -26,13 +28,15 @@ static class Lib
         lib["or"]=Dyadic((string x,string y)=>x==true.ToString()||y==true.ToString());
         lib["not"]=Mono((string x)=>{if(x==true.ToString())return false;else return true;});
 
-        lib["cat"]=Dyadic((string x,string y)=>x+y);
-        lib["len"]=Mono((string x)=>x.Length);
-        lib["at"]=At;
+        lib["strcat"]=Dyadic((string x,string y)=>x+y);
+        lib["strlen"]=Mono((string x)=>x.Length);
+        lib["strat"]=strAt;
 
         lib["eq"]=AllEq;
         lib["rp"]=Replace;
-        
+        lib["len"]=Len;
+        lib["at"]=At;
+        lib["append"]=Append;
     }
 
     static Op def(Op op)
@@ -106,7 +110,7 @@ static class Lib
             {
                 if(int.TryParse(op.inp[1].name,out int b))
                 {
-                    d.name=func(a,b).ToString() ?? "none";
+                    d.name=func(a,b).ToString() ?? "None";
                     return d;
                 }
             }
@@ -122,7 +126,7 @@ static class Lib
         {   
             if(op.inp.Length<2) Log.ExcepWrongParaNum(op,2);
             Op d=new Op();
-            d.name=func(op.inp[0].name,op.inp[1].name).ToString() ?? "none";
+            d.name=func(op.inp[0].name,op.inp[1].name).ToString() ?? "None";
             return d;
         }
         return dya;
@@ -134,7 +138,7 @@ static class Lib
         {
             if(op.inp.Length<1) Log.ExcepWrongParaNum(op,1);
             Op d=new Op();
-            d.name=func(op.inp[0].name).ToString() ?? "none";
+            d.name=func(op.inp[0].name).ToString() ?? "None";
             return d;
         }
         return mon;
@@ -282,7 +286,7 @@ static class Lib
         return be;
     }
 
-    static Op At(Op op)
+    static Op strAt(Op op)
     {
         if (op.inp.Length<2) Log.ExcepWrongParaNum(op,2);
         string name=op.inp[0].name;
@@ -292,9 +296,59 @@ static class Lib
         }
         else
         {
-            Log.Excep(op,$"except int,but {op.inp[1]}");
+            Log.Excep(op,$"except int as index,but {op.inp[1]}");
             return op;
         }
     }
 
+    static Op Len(Op op)
+    {
+        if (op.inp != null && op.inp[0].inp != null)
+        {
+            Op d=new Op();
+            d.name=op.inp[0].inp.Length.ToString();
+            return d;
+        }
+        else return new Op(){name="None"};
+    }
+
+    static Op At(Op op)
+    {
+        if (op.inp.Length<2) Log.ExcepWrongParaNum(op,2);
+        else if (op.inp[0].inp==null) Log.Excep(op,"no item inside");
+        else if(int.TryParse(op.inp[1].name,out int index))
+        {
+            Op[] ops=op.inp[0].inp;
+            index=index<0 ? index + ops.Length : index;
+            index=index % ops.Length;
+            Op d=ops[index].Copy();
+            return d;
+        }
+        else
+        {
+            Log.Excep(op,$"except int as index,but {op.inp[1]}");
+        }
+        return op;
+    }
+    
+    static Op Append(Op op)
+    {
+        if (op.inp.Length<2) Log.ExcepWrongParaNum(op,2);
+        Op be=op.inp[0];
+        Op item=op.inp[1];
+        Op d=new Op(){name=op.inp[0].name};
+        if (be.inp == null)
+        {
+            d.inp=new Op[1];
+            d.inp[0]=item.Copy();
+        }
+        else
+        {
+            d.inp=new Op[be.inp.Length+1];
+            Array.Copy(be.inp,d.inp,be.inp.Length);
+            d.inp[be.inp.Length]=item.Copy();
+        }
+        return d;
+
+    }
 }
