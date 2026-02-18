@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 static class Ma
 {
     static char[] separator=[' ','\n','\r',','];
@@ -8,10 +10,24 @@ static class Ma
         int jumpflag=0;
         for(int i = 1; i < code.Length-1; ++i)
         {
-            if(code[i]=='(') ++ jumpflag;
-            if(code[i]==')') -- jumpflag;
-            if(jumpflag==0 && Array.Exists<char>(separator,(char x)=>x==code[i]))
+            if (code[i] == '(') ++ jumpflag;
+            if (code[i] == ')') -- jumpflag;
+
+            if(jumpflag==0 && Array.Exists<char>(separator,(char x)=>x==code[i])) 
             {
+                if(temp.Length!=0)
+                    output.Add(temp);
+                temp="";
+            }
+            else if(code[i] == '(' && jumpflag == 1)
+            {
+                if(temp.Length!=0)
+                    output.Add(temp);
+                temp="(";
+            }
+            else if(code[i] == ')' && jumpflag == 0)
+            {
+                temp+=")";
                 if(temp.Length!=0)
                     output.Add(temp);
                 temp="";
@@ -158,11 +174,123 @@ static class Ma
         return op;
     }
 
+    public static List<string> CutCode(string code)
+    {
+        List<string> codes=[];
+        string tempcode="";
+        int quotenum=0;
+        bool jump=false;
+        for(int i = 0; i < code.Length; ++i)
+        {
+            if (code[i] == '(')
+            {
+                quotenum++;
+            }
+            else if (code[i] == ')')
+            {
+                quotenum--;
+                if (quotenum == 0 && tempcode!="")
+                {
+                    codes.Add(tempcode+")");
+                    tempcode="";
+                    continue;
+                }
+            }
+            else if (code[i] == '#')
+            {
+                jump=true;
+                continue;
+            }
+            else if (jump && code[i] == '\n')
+            {
+                jump=false;
+                continue;
+            }
+
+            if (!jump)
+            {
+                tempcode+=code[i];
+            }
+        }
+        return codes;
+    }
+
     public static Op Execute(string code)
     {
         Op op=Parse(code);
         op.Execute();
         return op;
+    }
+
+    public static Op ExecuteFile(string path)
+    {
+        string code=File.ReadAllText(path);
+        List<string> codes=CutCode(code);
+        Op op=new Op();
+        for(int i = 0; i < codes.Count; ++i)
+        {
+            op=Execute(codes[i]);
+        }
+        return op;
+    }
+
+    public static void Interact()
+    {
+        bool isstep=false;
+        Op op=new Op();
+        while (true)
+        {
+            Console.Write(">>");
+            string input=Console.ReadLine()??"";
+            if (input != "")
+            {
+                if (input[0] == ':')
+                {
+                    string[] command=CutHeadTail(input.Substring(1)).Split([' ']);
+                    if (command[0] == "q")
+                    {
+                        break;
+                    }
+                    else if (command[0] == "load")
+                    {
+                        ExecuteFile(command[1]);
+                        Console.WriteLine("done");
+                    }
+                    else if (command[0] == "step")
+                    {
+                        isstep=true;
+                        Console.WriteLine("step mode");
+                    }
+                    else if (command[0] == "execute")
+                    {
+                        isstep=false;
+                        Console.WriteLine("execute mode");
+                    }
+                    else if (command[0] == "show")
+                    {
+                        op.show();
+                        Console.ForegroundColor=ConsoleColor.White;
+                    }
+                }
+                else
+                {
+                    if (isstep)
+                    {
+                        op=Parse(input);
+                        while (op.ExecuteStep())
+                        {
+                            Console.WriteLine(op);
+                        }
+                    }
+                    else
+                    {
+                        op=Execute(input);
+                        Console.WriteLine(op); 
+                    }
+                    
+                }   
+            }
+        }
     }
 }
 
@@ -171,7 +299,7 @@ struct Op
     public string name;
     public Op[]? inp;
     public static Dictionary<string, (Op[],Op)> defines=new Dictionary<string, (Op[],Op)>();    //formInp,define
-    static string[] NoCallSub=["def","eq","rp","len"];
+    static string[] NoCallSub=["def","eq","rp"];
 
     public Op()
     {
@@ -207,11 +335,11 @@ struct Op
                 inp[0].Execute();
                 Explain();
             }
-            else if (name == "append" || name == "at")
-            {
-                inp[1].Execute();
-                Explain();
-            }
+            // else if (name == "append" || name == "at")
+            // {
+            //     inp[1].Execute();
+            //     Explain();
+            // }
             else
             {
                 for(int i = 0; i < inp.Length; ++i)
@@ -239,12 +367,12 @@ struct Op
                     Explain();
                 return true;
             }
-            else if (name == "append" || name == "at")
-            {
-                if(!inp[1].ExecuteStep())
-                    Explain();
-                return true;
-            }
+            // else if (name == "append" || name == "at")
+            // {
+            //     if(!inp[1].ExecuteStep())
+            //         Explain();
+            //     return true;
+            // }
             else
             {
                 for(int i = 0; i < inp.Length; ++i)
@@ -270,11 +398,16 @@ struct Op
         Op[] form;
         (form,d)=defines[name];
         d=d.Copy();
-        for(int i = 0; i < form.Length; ++i)
+        if(inp.Length<form.Length) Log.ExcepWrongParaNum(this,form.Length);
+        else
         {
-            d.Replace(form[i],inp[i]);
+            for(int i = 0; i < form.Length; ++i)
+            {
+                d.Replace(form[i],inp[i]);
+            }
+            ShallowCopyToThis(d);
         }
-        ShallowCopyToThis(d);
+        
     }
 
     public void ExpLib()
@@ -515,12 +648,25 @@ struct Op
                     {
                         inp[i].show(deep+1,0,false);
                     }
-                    
                 }
             }
         }
-        
-        
+    }
+
+    public void showOrigin(int deep=0)
+    {
+        for(int i = 0; i < deep; ++i)
+        {
+            Console.Write("     ");
+        }
+        Console.WriteLine(name);
+        if (inp != null)
+        {
+            for(int i = 0; i < inp.Length; ++i)
+            {
+                inp[i].showOrigin(deep+1);
+            }
+        }
     }
 
     bool isnosub()

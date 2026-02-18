@@ -1,5 +1,3 @@
-using System.Runtime.CompilerServices;
-
 delegate Op MaFunc(Op op);
 delegate object Dya(int a,int b);
 delegate object DyaStr(string a,string b);
@@ -28,15 +26,17 @@ static class Lib
         lib["or"]=Dyadic((string x,string y)=>x==true.ToString()||y==true.ToString());
         lib["not"]=Mono((string x)=>{if(x==true.ToString())return false;else return true;});
 
-        lib["strcat"]=Dyadic((string x,string y)=>x+y);
-        lib["strlen"]=Mono((string x)=>x.Length);
-        lib["strat"]=strAt;
+        lib["cat"]=Dyadic((string x,string y)=>x+y);
+        lib["namelen"]=Mono((string x)=>x.Length);
+        lib["nameat"]=strAt;
 
         lib["eq"]=AllEq;
         lib["rp"]=Replace;
         lib["len"]=Len;
         lib["at"]=At;
         lib["append"]=Append;
+        lib["rename"]=Rename;
+        lib["atlist"]=atList;
     }
 
     static Op def(Op op)
@@ -272,7 +272,6 @@ static class Lib
         //(rp 通配符 目标结构 替换结构 目标) 通配符可多项,可省略
         if (op.inp.Length<3) Log.ExcepWrongParaNum(op,3);
         string[] args=new string[op.inp.Length-3];
-        Op?[] assumeArgs=new Op?[op.inp.Length-3];
         for(int i = 0; i < op.inp.Length-3; ++i)
         {
             args[i]=op.inp[i].name;
@@ -290,9 +289,11 @@ static class Lib
     {
         if (op.inp.Length<2) Log.ExcepWrongParaNum(op,2);
         string name=op.inp[0].name;
-        if(int.TryParse(op.inp[1].name,out int inde))
+        if(int.TryParse(op.inp[1].name,out int index))
         {
-            return new Op(){name=name[inde].ToString()};
+            index=index<0 ? index - index/name.Length*name.Length + name.Length : index;
+            index=index % name.Length;
+            return new Op(){name=name[index].ToString()};
         }
         else
         {
@@ -316,9 +317,11 @@ static class Lib
     {
         if (op.inp.Length<2) Log.ExcepWrongParaNum(op,2);
         else if (op.inp[0].inp==null) Log.Excep(op,"no item inside");
+        else if(op.inp[0].inp.Length==0)  return new Op(){name="None"};
         else if(int.TryParse(op.inp[1].name,out int index))
         {
             Op[] ops=op.inp[0].inp;
+            if(index>ops.Length-1 || index<-ops.Length) Log.Excep(op,"out of range");
             index=index<0 ? index + ops.Length : index;
             index=index % ops.Length;
             Op d=ops[index].Copy();
@@ -335,20 +338,42 @@ static class Lib
     {
         if (op.inp.Length<2) Log.ExcepWrongParaNum(op,2);
         Op be=op.inp[0];
-        Op item=op.inp[1];
+        //Op item=op.inp[1];
         Op d=new Op(){name=op.inp[0].name};
         if (be.inp == null)
         {
-            d.inp=new Op[1];
-            d.inp[0]=item.Copy();
+            d.inp=new Op[op.inp.Length-1];
+            Array.Copy(op.inp,1,d.inp,0,d.inp.Length);
         }
         else
         {
-            d.inp=new Op[be.inp.Length+1];
+            d.inp=new Op[be.inp.Length+op.inp.Length-1];
             Array.Copy(be.inp,d.inp,be.inp.Length);
-            d.inp[be.inp.Length]=item.Copy();
+            Array.Copy(op.inp,1,d.inp,be.inp.Length,op.inp.Length-1);
         }
         return d;
 
+    }
+
+    static Op Rename(Op op)
+    {
+        if (op.inp.Length<2) Log.ExcepWrongParaNum(op,2);
+        Op body=op.inp[0].Copy();
+        body.name=op.inp[1].name;
+        return body;
+    }
+
+    static Op atList(Op op)
+    {
+        Op d=At(op);
+        if(d.inp==null || d.inp.Length==0) return new Op(){name="list",inp=[d]};
+        Op d2=new Op(){name="list"};
+        d2.inp=new Op[d.inp.Length+1];
+        d2.inp[0]=new Op(){name=d.name};
+        for(int i=0; i < d.inp.Length; ++i)
+        {
+            d2.inp[i+1]=d.inp[i];
+        }
+        return d2;
     }
 }
