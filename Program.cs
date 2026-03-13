@@ -1,26 +1,40 @@
-﻿class Program
+﻿
+class Program
 {
     static void Main()
     {
-        string code="(cat a (cat b c))";
-
-        Op op=Ma.Parse(code);
-        op.show();
-        Console.WriteLine(op);
+        string path=@"std.ma";
         
-        // foreach(var o in op.ExecuteSingleStep())
+        Ma.ExecuteFile(path);
+        // op.showOrigin();
+        // Console.ReadKey();
+        Ma.Interact();
+
+        // Ma.Execute("(def very f x (f (f (f x))))");
+        // Ma.Execute("(def ao x (append x aowu))");
+        // string code="(very (very ao (very ao miao)))";
+        
+        // List<string> s=Ma.CutB(code);
+        // for(int i = 0; i < s.Count; ++i)
         // {
-        //     Console.WriteLine(o);
+        //     Console.WriteLine(s[i]);
         // }
 
-        // while(op.inp!=null && op.HasDefine())
+        // string code="(len (cat a (cat b c)))";
+
+        // Op op=Ma.Parse("");
+        // op.show();
+        // Console.WriteLine(op.ToString());
+
+        // while(op.ExecuteStep())
         // {
-        //     op.ExecuteStep();
-        //     Console.WriteLine(op);
+        //     Console.Clear();
+        //     op.show();
+        //     Console.ReadKey();
         // }
 
-        op.Execute();
-        Console.WriteLine(op);
+        // op.Execute();
+        // Console.WriteLine(op);
     }
 }
 // string code="""
@@ -65,3 +79,28 @@
 
 // Ma.Execute("(def add x y (cons (+ (left x) (left y)) (+ (right x) (right y))))");
 // string code="(add (cons 1 2) (cons 3 4))";
+
+// Ma.Execute("(def addd (lam a (lam b (lam c (lam d (+ (+ a b) (+ c d)))))))");
+// string code="(((((addd) 1) 2) 3) 4)";
+
+// lam(a,lam(b,lam(c,lam(d,+(+(a,b),+(c,d))))))(1)(2)(3)(4)
+// ((lam x y ((lam y x (- x y)) x y)) 2 3)
+
+//def(takeout op rp(x nocall(x) x op))
+//def(myif cond then else takeout(cond()(nocall(then),nocall(else))))
+
+// Ma.Execute("(def takeout op (rp x (nocall x) x op))");
+// Ma.Execute("(def myif cond then else (takeout (cond then else)))");
+// Ma.Execute("(def true x y x)");
+// Ma.Execute("(def false x y y)");
+// string code="(myif true (nocall (+ 1 2)) (nocall (+ 3 4)))";
+
+// Ma.Execute("(def takeout op (rp x (nocall x) x op))");
+// Ma.Execute("(def myif cond then else (call (cond then else)))");
+// Ma.Execute("(def true x y x)");
+// Ma.Execute("(def false x y y)");
+// string code="(myif true (lam (+ 1 2)) (lam (+ 3 4)))";
+
+//(((lam f (f f)) (lam f (lam n (if (= n 0) 1 (* n ((f f) (- n 1))))))) 4)//匿名递归阶乘
+
+//((def fiblist n l t (if (= n t) l (fiblist (+ n 1) (append l (feb n)) t))) 0 list 10)

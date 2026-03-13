@@ -1,0 +1,25 @@
+(def atlistlize l ((def listlize-p2 l temp (if (= (len temp) (len l)) 
+                                                temp 
+                                                (listlize-p2 l (append temp (atlistlize (atlist l (len temp))))))) l (append list (at l 0))))
+(defn listlize x (wait (atlistlize (exp (make x (exp (rename list x)) x)))))
+(def noc2list x (listlize (atlist x 0)))
+(def evallist l (if (!= l list) l (rename((def evallist-part l temp  
+                                                (if (= (len temp) (len l)) 
+                                                    temp 
+                                                    (evallist-part l (append temp (evallist (at l (len temp))))))) l (append list (at l 0))) call)))
+(defn and a b (if a b a))
+(defn or a b (if a a b))
+(def not a (if a False True))
+(def >= a b (or (> a b) (= a b)))
+(def <= a b (or (< a b) (= a b)))
+(def isempty x (= 0 (len x)))
+(def isatom x (= None (len x)))
+(def first x (at x 0))
+(def last x (at x -1))
+(def name x (rename list x))
+(def map f x (if (isempty x) x (insert (f (first x)) (map f (rest x)))))
+(def mtree f x (if (isempty x) 
+                    x
+                    (if (isatom x)
+                        (f x)
+                        (insert (mtree f (first x)) (mtree f (rest x))))))

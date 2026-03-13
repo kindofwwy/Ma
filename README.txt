@@ -30,8 +30,16 @@ def函数里面可以加入更多的参数。例如(def fun x (havefun x))。在
 (def add x y (+ x y)) => add ; (add 1 2) => 3 ；(add (- 3 2) (* 1 4)) => (add 1 4) => 5
 (def pi 314) => pi ; (pi) => 314
 
+(defn name args body) => name
+定义一个函数，在调用这个函数时，它的参数不会被求值。其中args的数量不定（可以取0个）。
+它的性质与def一致，除了在使用被它所定义的函数时，函数的参数不会进行求值。
+例子：
+(defn delay x (nocall x)) => delay ; (delay (+ 1 2)) => (nocall (+ 1 2))
+
 (call name args) => (name args)
 调用函数。其中args的数量不定（可以取0个）。
+例子：
+(call + 2 3) => (+ 2 3) => 5
 
 (if cond then else) => then 或 else
 条件判断。
@@ -52,11 +60,6 @@ def函数里面可以加入更多的参数。例如(def fun x (havefun x))。在
 (！= a b) => True 或 False
 判断不相等。若a和b名字相同则返回False，否则True。
 
-(and a b) => True 或 False
-(or a b) => True 或 False
-(not a) => True 或 False
-逻辑运算。其中a和b为True或False。
-
 (eq a b) => True 或 False
 比较两个函数的整体是否相等。会对函数的名字，以及每个子项进行比较。
 存在特殊调用顺序：内部不会进行调用。
@@ -68,34 +71,103 @@ def函数里面可以加入更多的参数。例如(def fun x (havefun x))。在
 例子：
 (rp a (not a) a (not True)) => True
 (rp x y (+ x y) (- x y) (+ (+ 1 2) (* 3 4))) => (- (+ 1 2) (* 3 4)) => -9
-(rp f x (f x) (x f) (True (not some))) => (not True) => False   //这里的x只会替换名字
+(rp f x (f x) (x f) (True (not some))) => (not True) => False   #这里的x只会替换名字
 
 (len a) => b 或 None
-得到a的子项的项数。若a不是一个被调用的函数，返回None。
+得到a的子项的项数。若a是一个没有参数的函数，返回None。
 
 (at a index) => b
-获取a的第index个子项。第一项的index为0，后续依次递增。支持index使用-1返回a的倒数第1个子项。
+获取a的第index个子项。第一项的index为0，后续依次递增。可以使用-n返回a的倒数第n个子项。
 
 (append a b) => (a b)
-给a添加一个或多个子项。会添加在最右侧。若a没有子项，也会添加一个子项。
+给a添加一个或多个子项。会添加在最右侧。若a没有子项，会添加一个子项。
 例子：
 (append list 1 2 3) => (list 1 2 3)
 
+(insert a b) => (b a)
+把a插入b的参数的第一位。若b没有子项，会添加一个子项。
+例子：
+(insert 1 (list 2 3)) => (list 1 2 3)
+
 (rename a name) => name
 把a的名字改成name。a的子项会保留。
+例子：
+(rename (list 1 2 3) d) => (d 1 2 3)
+(rename list (d 1 2 3)) => d
+
+(rest x) => (x-name x-rest-args)
+获取x除第一项以外的剩余项。
+返回的函数与x的函数名保持一致，返回的参数除了缺少x的第一项以外保持一致。
+例子：
+(rest (list 1 2)) => (list 2)
+(rest (list 2)) => (list)
 
 (atlist a index) => (list b b-args)
-获取a的第index个子项，获取的结果会被转化为list形式，即名字为list，参数首项为a的第index项的名字，剩下的项为a的第index项的参数的未定义函数。
+获取a的第index个子项，获取的结果会被转化为以下的list形式：函数名为list，参数首项为a的第index项的名字，剩下的项为a的第index项的参数的函数。
 例子：
 (atlist (numlist 1 2 3) 2) => (list 3)
 (atlist (list (a)) 0) => (list (a))
 (atlist (list (* (+ 1 2) 3)) 0) => (list * (+ 1 2) 3)
 
+(wait x) => y
+停止x内一般函数的求值。
+在wait的参数内，一般的函数会停止求值，除了以下函数：
+(exp x) => y ：对x进行直接求值。
+    例子：
+    (wait (exp (at (+ 1 2) 0))) => (wait 1) => 1
+(exe x) => y ：对x进行彻底求值。即平时的求值顺序，先求值参数，再求值该函数，直到无法进行求值。
+    例子：
+    (wait (exe (+ 1 (+ 2 3)))) => (wait (exe (+ 1 5))) => (wait (exe 6)) => (wait 6) => 6
+(expif cond then else) => then 或 else ：代替一般的if。当cond为True或False时，会立刻替换。
+    例子：
+    (wait (expif True (exp (+ 1 1)) (exp (/ 1 0)))) => (wait (exp (+ 1 1))) => (wait 2) => 2 
+wait会对自身内部的exp和exe按照从左到右，从深到浅的顺序执行。expif的执行顺序为，当cond为True或False时执行。多层时从左至右，从浅至深执行。
+当内部没有以上函数时，会返回内部的值。
+存在特殊调用顺序：内部接管调用。
+
+库函数：
+(first x) => y
+获取x的第一个子项。
+例子：
+(first (list 1 2)) => 1
+
+(last x) => y
+获取x的最后一个子项。
+例子：
+(first (list 1 2)) => 2
+
+(and a b) => True 或 False
+逻辑与运算。
+其中a和b为True或False。
+若a值为False，则不会对b进行运算，直接返回False。
+
+(or a b) => True 或 False
+逻辑或运算。
+其中a和b为True或False。
+若a值为True，则不会对b进行运算，直接返回True。
+
+(not a) => True 或 False
+逻辑非运算。
+其中a为True或False。
+
+(>= a b) => True 或 False
+(<= a b) => True 或 False
+大于等于以及小于等于。
+其中a和b为整数。
 
 约定的未定义函数：
 True
 False
+布尔值。
+
 None
+作为使用len函数测量一个没有参数的函数的长度时的返回值。
+
+err
+错误函数。
+当函数在运行时出现问题，会返回err。如果函数的参数中含有err，函数会被替换为err，这种替换优先于任何函数。
+例子：
+(if True some err) => err
 
 (list name args)
 用来装载函数的结构。
@@ -113,8 +185,8 @@ None
 
 对于存在特殊调用顺序的函数，若要使用正常调用顺序，可以将它包裹在def里。
 例子：
-(def normlen x (len x)) ; (normlen (+ 2 3)) => (normlen 5) => None
+(def make-list x y (list x y)) ; (make-list (+ 1 2) 4) => (list 3 4)
 
 对于希望不进行调用的函数，可以将它包裹在一个未定义函数里。
 例子：
-(nocall (+ 1 2)) //(+ 1 2)不会被调用
+(nocall (+ 1 2)) #(+ 1 2)不会被调用

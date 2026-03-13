@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 static class Ma
 {
     static char[] separator=[' ','\n','\r',','];
@@ -107,6 +105,7 @@ static class Ma
         if (code[0] == '(' && code[code.Length - 1] == ')')
         {
             List<string> codes=Cut(code);
+            if(codes.Count==0) return new Op{name="None"};
             if (codes[0][0] == '(' && codes[0][codes[0].Length - 1] == ')')     //((def mul2 x (+ x x)) 10)
             {
                 op.name="call";
@@ -237,6 +236,7 @@ static class Ma
     public static void Interact()
     {
         bool isstep=false;
+        bool ispause=false;
         Op op=new Op();
         while (true)
         {
@@ -259,12 +259,20 @@ static class Ma
                     else if (command[0] == "step")
                     {
                         isstep=true;
+                        ispause=false;
                         Console.WriteLine("step mode");
                     }
                     else if (command[0] == "execute")
                     {
                         isstep=false;
+                        ispause=false;
                         Console.WriteLine("execute mode");
+                    }
+                    else if (command[0] == "pause")
+                    {
+                        isstep=true;
+                        ispause=true;
+                        Console.WriteLine("pause mode");
                     }
                     else if (command[0] == "show")
                     {
@@ -274,20 +282,27 @@ static class Ma
                 }
                 else
                 {
-                    if (isstep)
+                    try
                     {
-                        op=Parse(input);
-                        while (op.ExecuteStep())
+                        if (isstep)
                         {
-                            Console.WriteLine(op);
+                            op=Parse(input);
+                            while (op.ExecuteStep())
+                            {
+                                Console.WriteLine(op);
+                                if(ispause) Console.ReadKey();
+                            }
+                        }
+                        else
+                        {
+                            op=Execute(input);
+                            Console.WriteLine(op); 
                         }
                     }
-                    else
+                    catch (Exception e)
                     {
-                        op=Execute(input);
-                        Console.WriteLine(op); 
+                        Console.WriteLine(e);
                     }
-                    
                 }   
             }
         }
@@ -299,7 +314,7 @@ struct Op
     public string name;
     public Op[]? inp;
     public static Dictionary<string, (Op[],Op)> defines=new Dictionary<string, (Op[],Op)>();    //formInp,define
-    static string[] NoCallSub=["def","eq","rp"];
+    public static List<string> NoCallSub=["def","eq","rp","wait","exp","defn"];
 
     public Op()
     {
@@ -311,18 +326,26 @@ struct Op
         return defines.ContainsKey(name)||Lib.lib.ContainsKey(name);
     }
 
-    bool isNoCallSub()
+    public bool isNoCallSub()
     {
         string name=this.name;
-        return Array.Exists<string>(NoCallSub,(string x)=>x==name);
+        return NoCallSub.Exists((string x)=>x==name); //Array.Exists<string>(NoCallSub,(string x)=>x==name);
     }
 
     public void Explain()
     {
-        if(defines.ContainsKey(name))
-        ExpDic();
-        else if(Lib.lib.ContainsKey(name))
-        ExpLib();
+        int errind=Array.FindIndex<Op>(inp,(Op x) => x.name == "err");
+        if(errind!=-1)
+        {
+            ShallowCopyToThis(inp[errind]);
+        }
+        else
+        {
+            if(defines.ContainsKey(name))
+            ExpDic();
+            else if(Lib.lib.ContainsKey(name))
+            ExpLib();
+        }
     }
 
     public void Execute()
@@ -335,11 +358,6 @@ struct Op
                 inp[0].Execute();
                 Explain();
             }
-            // else if (name == "append" || name == "at")
-            // {
-            //     inp[1].Execute();
-            //     Explain();
-            // }
             else
             {
                 for(int i = 0; i < inp.Length; ++i)
@@ -367,12 +385,6 @@ struct Op
                     Explain();
                 return true;
             }
-            // else if (name == "append" || name == "at")
-            // {
-            //     if(!inp[1].ExecuteStep())
-            //         Explain();
-            //     return true;
-            // }
             else
             {
                 for(int i = 0; i < inp.Length; ++i)
@@ -401,10 +413,7 @@ struct Op
         if(inp.Length<form.Length) Log.ExcepWrongParaNum(this,form.Length);
         else
         {
-            for(int i = 0; i < form.Length; ++i)
-            {
-                d.Replace(form[i],inp[i]);
-            }
+            d.Replaces(form,inp);
             ShallowCopyToThis(d);
         }
         
@@ -418,7 +427,7 @@ struct Op
 
     bool isNeedAlpha(Op target) //((lam x y ((lam y x (- x y)) x y)) 2 3)
     {
-        if ((name == "def" || name == "lam" || name == "rp") && inp!=null)
+        if ((name == "def" || name == "lam" || name == "rp" || name == "defn") && inp!=null)
         {
             bool ignore=false;
             int bias=name=="rp"?3:1;
@@ -435,51 +444,104 @@ struct Op
         else return false;
     }
 
-    public void Replace(Op target,Op content) //def
+    // public void Replace(Op target,Op content) //def
+    // {
+    //     if (!isNeedAlpha(target))
+    //     {
+    //         if (name == target.name)
+    //         {
+    //             if (inp == null)
+    //             {
+    //                 Op def=content.Copy();
+    //                 ShallowCopyToThis(def);
+    //             }
+    //             else
+    //             {
+    //                 if (content.name == "lam")  //((def f c x y (c x y)) (lam x y (+ x y)) 10 2)
+    //                 {
+    //                     Op c=new Op(){name="call"};
+    //                     c.inp=new Op[inp.Length+1];
+    //                     c.inp[0]=content.Copy();
+    //                     for(int i = 0; i < inp.Length; ++i)
+    //                     {
+    //                         c.inp[i+1]=inp[i];
+    //                     }
+    //                     ShallowCopyToThis(c);
+    //                 }
+    //                 else
+    //                 {
+    //                     name=content.name;
+    //                 }
+    //                 for(int i = 0; i < inp.Length; ++i)
+    //                 {
+    //                     inp[i].Replace(target,content);
+    //                 } 
+    //             }
+    //         }
+    //         else
+    //         {
+    //             if(inp!=null)
+    //             {
+    //                 for(int i = 0; i < inp.Length; ++i)
+    //                 {
+    //                     inp[i].Replace(target,content);
+    //                 } 
+    //             }
+    //         }
+    //     }
+    // }
+
+    public bool Replaces(Op[] targets,Op[] contents)
     {
-        if (!isNeedAlpha(target))
+        List<Op> newtar=new List<Op>();
+        for(int j = 0; j < targets.Length; ++j)
         {
-            if (name == target.name)
+            Op target=targets[j];
+            Op content=contents[j];
+            if (!isNeedAlpha(target))
             {
-                if (inp == null)
+                newtar.Add(target);
+                if (name == target.name)
                 {
-                    Op def=content.Copy();
-                    ShallowCopyToThis(def);
-                }
-                else
-                {
-                    if (content.name == "lam")  //((def f c x y (c x y)) (lam x y (+ x y)) 10 2)
+                    if (inp == null)
                     {
-                        Op c=new Op(){name="call"};
-                        c.inp=new Op[inp.Length+1];
-                        c.inp[0]=content.Copy();
-                        for(int i = 0; i < inp.Length; ++i)
-                        {
-                            c.inp[i+1]=inp[i];
-                        }
-                        ShallowCopyToThis(c);
+                        Op def=content.Copy();
+                        ShallowCopyToThis(def);
                     }
                     else
                     {
-                        name=content.name;
+                        if (content.name == "lam")  //((def f c x y (c x y)) (lam x y (+ x y)) 10 2)
+                        {
+                            Op c=new Op(){name="call"};
+                            c.inp=new Op[inp.Length+1];
+                            c.inp[0]=content.Copy();
+                            for(int i = 0; i < inp.Length; ++i)
+                            {
+                                c.inp[i+1]=inp[i];
+                            }
+                            ShallowCopyToThis(c);
+                        }
+                        else
+                        {
+                            name=content.name;
+                        }
+                        for(int i = 0; i < inp.Length; ++i)
+                        {
+                            inp[i].Replaces(targets,contents);
+                        }
                     }
-                    for(int i = 0; i < inp.Length; ++i)
-                    {
-                        inp[i].Replace(target,content);
-                    } 
-                }
-            }
-            else
-            {
-                if(inp!=null)
-                {
-                    for(int i = 0; i < inp.Length; ++i)
-                    {
-                        inp[i].Replace(target,content);
-                    } 
+                    return true;
                 }
             }
         }
+        if(inp!=null)
+        {
+            for(int i = 0; i < inp.Length; ++i)
+            {
+                inp[i].Replaces(newtar.ToArray(), contents);
+            } 
+        }
+        return false;
     }
 
     public void ReplaceOnly(Op target,Op content) //rp
