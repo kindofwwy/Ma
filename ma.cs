@@ -1,3 +1,6 @@
+using System.Diagnostics;
+using System.Linq.Expressions;
+
 static class Ma
 {
     static char[] separator=[' ','\n','\r',','];
@@ -173,6 +176,16 @@ static class Ma
         return op;
     }
 
+    public static Op ParseMix(string code)
+    {
+        code=CutHeadTail(code);
+        if (code[0] == '(')
+        {
+            return Parse(code);
+        }
+        return ParseB(code);
+    }
+
     public static List<string> CutCode(string code)
     {
         List<string> codes=[];
@@ -214,9 +227,41 @@ static class Ma
         return codes;
     }
 
+    public static int ShowOpHint(Op op,int deep=0,int current=0,int target=0)
+    {
+        if (deep == 0)
+        {
+            if(!op.ExeLineNumber(ref target)) target=-1;
+        }
+        for(int i = 0; i < deep; ++i)
+        {
+            Console.Write("     ");
+        }
+        if (current == target)
+        {
+            Console.ForegroundColor=ConsoleColor.Yellow;
+        }
+        Console.WriteLine(op.name+((op.inp!=null && op.inp.Length==0)?"()":""));
+        int line=current;
+        if (op.inp != null)
+        {
+            
+            for(int i = 0; i < op.inp.Length; ++i)
+            {
+                line++;
+                line=ShowOpHint(op.inp[i],deep+1,line,target);
+            }
+        }
+        if (current == target)
+        {
+            Console.ForegroundColor=ConsoleColor.White;
+        }
+        return line;
+    }
+
     public static Op Execute(string code)
     {
-        Op op=Parse(code);
+        Op op=ParseMix(code);
         op.Execute();
         return op;
     }
@@ -235,7 +280,7 @@ static class Ma
 
     public static void Interact()
     {
-        bool isstep=false;
+        Modes modes=Modes.execute;
         bool ispause=false;
         Op op=new Op();
         while (true)
@@ -258,20 +303,20 @@ static class Ma
                     }
                     else if (command[0] == "step")
                     {
-                        isstep=true;
                         ispause=false;
+                        modes=Modes.step;
                         Console.WriteLine("step mode");
                     }
                     else if (command[0] == "execute")
                     {
-                        isstep=false;
                         ispause=false;
+                        modes=Modes.execute;
                         Console.WriteLine("execute mode");
                     }
                     else if (command[0] == "pause")
                     {
-                        isstep=true;
                         ispause=true;
+                        modes=Modes.step;
                         Console.WriteLine("pause mode");
                     }
                     else if (command[0] == "show")
@@ -279,24 +324,41 @@ static class Ma
                         op.show();
                         Console.ForegroundColor=ConsoleColor.White;
                     }
+                    else if (command[0] == "demo")
+                    {
+                        modes=Modes.demo;
+                        Console.WriteLine("demo mode");
+                    }
                 }
                 else
                 {
                     try
                     {
-                        if (isstep)
+                        if (modes==Modes.step)
                         {
-                            op=Parse(input);
+                            op=ParseMix(input);
                             while (op.ExecuteStep())
                             {
-                                Console.WriteLine(op);
+                                Console.WriteLine(op.ToStringB());
                                 if(ispause) Console.ReadKey();
                             }
+                        }
+                        else if (modes==Modes.demo)
+                        {
+                            op=ParseMix(input);
+                            while (op.ExecuteStep())
+                            {
+                                ShowOpHint(op);
+                                if(ispause) Console.ReadKey();
+                                else Thread.Sleep(1000);
+                                Console.Clear();
+                            }
+                            ShowOpHint(op);
                         }
                         else
                         {
                             op=Execute(input);
-                            Console.WriteLine(op); 
+                            Console.WriteLine(op.ToStringB()); 
                         }
                     }
                     catch (Exception e)
@@ -309,12 +371,18 @@ static class Ma
     }
 }
 
+enum Modes
+{
+    execute,
+    step,
+    demo
+}
 struct Op
 {
     public string name;
     public Op[]? inp;
     public static Dictionary<string, (Op[],Op)> defines=new Dictionary<string, (Op[],Op)>();    //formInp,define
-    public static List<string> NoCallSub=["def","eq","rp","wait","exp","defn"];
+    public static List<string> NoCallSub=["def","eq","wait","exp","defn"];
 
     public Op()
     {
@@ -337,6 +405,8 @@ struct Op
         int errind=Array.FindIndex<Op>(inp,(Op x) => x.name == "err");
         if(errind!=-1)
         {
+            if(name=="catch")
+                inp[errind].name="cerr";
             ShallowCopyToThis(inp[errind]);
         }
         else
@@ -356,6 +426,11 @@ struct Op
             else if (name == "if")
             {
                 inp[0].Execute();
+                Explain();
+            }
+            else if (name == "rp" | name == "rpall")
+            {
+                inp[inp.Length-1].Execute();
                 Explain();
             }
             else
@@ -381,7 +456,13 @@ struct Op
             }
             else if (name == "if")
             {
-                if(!inp[0].ExecuteStep())
+                if (!inp[0].ExecuteStep())
+                    Explain();
+                return true;
+            }
+            else if (name == "rp" | name == "rpall")
+            {
+                if (!inp[inp.Length - 1].ExecuteStep())
                     Explain();
                 return true;
             }
@@ -401,6 +482,83 @@ struct Op
         else
         {
             return false;
+        }
+    }
+
+    public bool ExeLineNumber(ref int line,int current=0,bool countonly=false)  //下次step会执行的代码行号
+    {
+        if (countonly)
+        {
+            if (inp != null)
+            {
+                for(int i = 0; i < inp.Length; ++i)
+                {
+                    line++;
+                    inp[i].ExeLineNumber(ref line,line,countonly);
+                }
+                return false;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        if (inp != null && HasDefine())
+        {
+            if (isNoCallSub()) 
+            {
+                return true;
+            }
+            else if (name == "if")
+            {
+                if(!inp[0].ExeLineNumber(ref line,line+1))
+                    line=current;
+                return true;
+            }
+            else if (name == "rp" | name == "rpall")
+            {
+                for(int i = 0; i < inp.Length-1; ++i)
+                {
+                    line++;
+                    inp[i].ExeLineNumber(ref line,line,true);
+                }
+                line++;
+                if(!inp[inp.Length-1].ExeLineNumber(ref line,line))
+                    line=current;
+                return true;
+            }
+            else
+            {
+                for(int i = 0; i < inp.Length; ++i)
+                {
+                    line++;
+                    if (inp[i].ExeLineNumber(ref line,line))
+                    {
+                        return true;
+                    }
+                }
+                line=current;
+                return true;
+            }
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    public int CountLines()
+    {
+        if(inp==null) return 1;
+        else
+        {
+            int s=0;
+            for(int i = 0; i < inp.Length; ++i)
+            {
+                s+=inp[i].CountLines();
+            }
+            return s;
         }
     }
 
@@ -444,53 +602,6 @@ struct Op
         else return false;
     }
 
-    // public void Replace(Op target,Op content) //def
-    // {
-    //     if (!isNeedAlpha(target))
-    //     {
-    //         if (name == target.name)
-    //         {
-    //             if (inp == null)
-    //             {
-    //                 Op def=content.Copy();
-    //                 ShallowCopyToThis(def);
-    //             }
-    //             else
-    //             {
-    //                 if (content.name == "lam")  //((def f c x y (c x y)) (lam x y (+ x y)) 10 2)
-    //                 {
-    //                     Op c=new Op(){name="call"};
-    //                     c.inp=new Op[inp.Length+1];
-    //                     c.inp[0]=content.Copy();
-    //                     for(int i = 0; i < inp.Length; ++i)
-    //                     {
-    //                         c.inp[i+1]=inp[i];
-    //                     }
-    //                     ShallowCopyToThis(c);
-    //                 }
-    //                 else
-    //                 {
-    //                     name=content.name;
-    //                 }
-    //                 for(int i = 0; i < inp.Length; ++i)
-    //                 {
-    //                     inp[i].Replace(target,content);
-    //                 } 
-    //             }
-    //         }
-    //         else
-    //         {
-    //             if(inp!=null)
-    //             {
-    //                 for(int i = 0; i < inp.Length; ++i)
-    //                 {
-    //                     inp[i].Replace(target,content);
-    //                 } 
-    //             }
-    //         }
-    //     }
-    // }
-
     public bool Replaces(Op[] targets,Op[] contents)
     {
         List<Op> newtar=new List<Op>();
@@ -510,7 +621,7 @@ struct Op
                     }
                     else
                     {
-                        if (content.name == "lam")  //((def f c x y (c x y)) (lam x y (+ x y)) 10 2)
+                        if (content.name == "lam" || content.inp != null)  //((def f c x y (c x y)) (lam x y (+ x y)) 10 2)
                         {
                             Op c=new Op(){name="call"};
                             c.inp=new Op[inp.Length+1];
@@ -536,55 +647,53 @@ struct Op
         }
         if(inp!=null)
         {
+            bool res=false;
             for(int i = 0; i < inp.Length; ++i)
             {
-                inp[i].Replaces(newtar.ToArray(), contents);
-            } 
+                res|=inp[i].Replaces(newtar.ToArray(), contents);
+            }
+            return res;
         }
         return false;
     }
 
-    public void ReplaceOnly(Op target,Op content) //rp
+    public bool ReplacesOnly(Op[] targets,Op[] contents)    //rp
     {
-        if (name == target.name)
+        for(int j = 0; j < targets.Length; ++j)
         {
-            if (inp == null)
+            Op target=targets[j];
+            Op content=contents[j];
+            if (!isNeedAlpha(target))
             {
-                Op def=content.Copy();
-                ShallowCopyToThis(def);
-            }
-            else
-            { 
-                name=content.name;
-            }
-        }
-        else
-        {
-            if(inp!=null)
-            {
-                for(int i = 0; i < inp.Length; ++i)
+                if (name == target.name)
                 {
-                    inp[i].ReplaceOnly(target,content);
-                } 
+                    if (inp == null)
+                    {
+                        Op def=content.Copy();
+                        ShallowCopyToThis(def);
+                    }
+                    else
+                    {
+                        name=content.name;
+                        for(int i = 0; i < inp.Length; ++i)
+                        {
+                            inp[i].ReplacesOnly(targets,contents);
+                        }
+                    }
+                    return true;
+                }
             }
-        } 
-        
-    }
-
-    public void ReplaceName(string target,string content)
-    {
-        if (name == target)
-        {
-            name=content;
         }
-        else
+        if(inp!=null)
         {
-            if(inp!=null)
-            for(int i = 0; i < inp.Length; i++)
+            bool res=false;
+            for(int i = 0; i < inp.Length; ++i)
             {
-                inp[i].ReplaceName(target,content);
+                res|=inp[i].ReplacesOnly(targets, contents);
             }
+            return res;
         }
+        return false;
     }
 
     public bool isAllEq(Op op)

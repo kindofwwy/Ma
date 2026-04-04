@@ -30,19 +30,26 @@ static class Lib
 
         lib["eq"]=AllEq;
         lib["rp"]=Replace;
+        lib["rpall"]=RpAll;
         lib["len"]=Len;
         lib["at"]=At;
+        lib["set"]=Set;
         lib["append"]=Append;
         lib["rename"]=Rename;
         lib["atlist"]=atList;
+        lib["lookup"]=LookUp;
 
         lib["wait"]=Wait;
         lib["exp"]=Exp;
         lib["exe"]=Exe;
+        lib["step"]=Step;
 
         lib["rest"]=Rest;
         lib["insert"]=Insert;
         lib["pop"]=Pop;
+
+        lib["catch"]=Catch;
+        lib["raise"]=Raise;
     }
 
     static Op Def(Op op)
@@ -75,10 +82,10 @@ static class Lib
     static Op Call(Op op)
     {
         if(op.inp.Length<1) return Log.ExcepWrongParaNum(op,1);
-        if(op.inp[0].name=="def" || op.inp[0].name=="defn") op.inp[0].Explain();
-        else if (op.inp[0].name == "lam")
+        Op be=op.inp[0];
+        if (be.name == "lam" && be.inp!=null && be.inp.Length>0)
         {
-            Op lam=op.inp[0];
+            Op lam=be;
             Op lambody=lam.inp[lam.inp.Length-1].Copy();
             Op[] lamargs=new Op[lam.inp.Length-1];
             Array.Copy(lam.inp,0,lamargs,0,lam.inp.Length-1);
@@ -87,13 +94,9 @@ static class Lib
             lambody.Replaces(lamargs,lamRealargs);
             return lambody;
         }
-        Op d=op.inp[0].Copy();
-        d.inp=new Op[op.inp.Length-1];
-        for(int i = 1; i < op.inp.Length; ++i)
-        {
-            d.inp[i-1]=op.inp[i];
-        }
-        return d;
+        be.inp=new Op[op.inp.Length-1];
+        Array.Copy(op.inp,1,be.inp,0,be.inp.Length);
+        return be;
     }
 
     static Op If(Op op)
@@ -257,21 +260,18 @@ static class Lib
         Op?[] assumeArgs=new Op?[args.Length];
         if(select_part(target,args,be,ref assumeArgs))
         {
+            List<Op> tars=[];
+            List<Op> cons=[];
+
             for(int i = 0; i < assumeArgs.Length; ++i)
             {
-                if (!assumeArgs[i].HasValue)
+                if (assumeArgs[i].HasValue)
                 {
-                    continue;
-                }
-                else if (assumeArgs[i].Value.inp == null)
-                {
-                    content.ReplaceName(args[i],assumeArgs[i].Value.name);
-                }
-                else
-                {
-                    content.ReplaceOnly(new Op(){name=args[i]},assumeArgs[i].Value);
+                    tars.Add(new Op(){name=args[i]});
+                    cons.Add(assumeArgs[i].Value);
                 }
             }
+            content.ReplacesOnly(tars.ToArray(),cons.ToArray());
             be.ShallowCopyToThis(content);
             return true;
         }
@@ -289,6 +289,36 @@ static class Lib
         else return false;
     }
 
+    static void selectAll(Op target,string[] args,ref Op be,Op content)
+    {
+        Op?[] assumeArgs=new Op?[args.Length];
+
+        if(be.inp != null)
+        {
+            for(int i = 0; i < be.inp.Length; ++i)
+            {
+                selectAll(target,args,ref be.inp[i], content);
+            }
+        }
+        if(select_part(target,args,be,ref assumeArgs))
+        {
+            List<Op> tars=[];
+            List<Op> cons=[];
+
+            for(int i = 0; i < assumeArgs.Length; ++i)
+            {
+                if (assumeArgs[i].HasValue)
+                {
+                    tars.Add(new Op(){name=args[i]});
+                    cons.Add(assumeArgs[i].Value);
+                }
+            }
+            Op c=content.Copy();
+            c.ReplacesOnly(tars.ToArray(),cons.ToArray());
+            be.ShallowCopyToThis(c);
+        }
+    }
+
     static Op Replace(Op op)
     {
         //(rp 通配符 目标结构 替换结构 目标) 通配符可多项,可省略
@@ -303,6 +333,24 @@ static class Lib
         Op target=op.inp[op.inp.Length-3];
         
         select(target,args,ref be,content);
+
+        return be;
+    }
+
+    static Op RpAll(Op op)
+    {
+        //(rpall 通配符 目标结构 替换结构 目标) 通配符可多项,可省略
+        if (op.inp.Length<3) return Log.ExcepWrongParaNum(op,3);
+        string[] args=new string[op.inp.Length-3];
+        for(int i = 0; i < op.inp.Length-3; ++i)
+        {
+            args[i]=op.inp[i].name;
+        }
+        Op be=op.inp[op.inp.Length-1].Copy();
+        Op content=op.inp[op.inp.Length-2].Copy();
+        Op target=op.inp[op.inp.Length-3];
+        
+        selectAll(target,args,ref be,content);
 
         return be;
     }
@@ -337,8 +385,7 @@ static class Lib
     static Op At(Op op)
     {
         if (op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
-        else if (op.inp[0].inp==null) return Log.ExcepNoItem(op);
-        else if(op.inp[0].inp.Length==0)  return new Op(){name="None"};
+        else if (op.inp[0].inp==null || op.inp[0].inp.Length==0) return Log.ExcepNoItem(op);
         else if(int.TryParse(op.inp[1].name,out int index))
         {
             Op[] ops=op.inp[0].inp;
@@ -347,6 +394,28 @@ static class Lib
             index=index % ops.Length;
             Op d=ops[index].Copy();
             return d;
+        }
+        else
+        {
+            return Log.ExcepIndex(op,op.inp[1].ToString());
+        }
+    }
+
+    static Op Set(Op op)
+    {
+        if (op.inp.Length<3) return Log.ExcepWrongParaNum(op,3);
+        else if (op.inp[0].inp==null || op.inp[0].inp.Length==0) return Log.ExcepNoItem(op);
+        else if(int.TryParse(op.inp[1].name,out int index))
+        {
+            Op[] ops=op.inp[0].inp;
+            if(index>ops.Length-1 || index<-ops.Length) return Log.OutOfRange(op,index);
+            index=index<0 ? index + ops.Length : index;
+            index=index % ops.Length;
+            ops[index]=op.inp[2];
+            op.name=op.inp[0].name;
+            op.inp=ops;
+            
+            return op;
         }
         else
         {
@@ -377,7 +446,7 @@ static class Lib
     static Op Rename(Op op)
     {
         if (op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
-        Op body=op.inp[0].Copy();
+        Op body=op.inp[0];
         body.name=op.inp[1].name;
         return body;
     }
@@ -400,7 +469,7 @@ static class Lib
     static Op Exp(Op op)
     {
         if (op.inp.Length<1) return Log.ExcepWrongParaNum(op,1);
-        Op d=op.inp[0].Copy();
+        Op d=op.inp[0];
         d.Explain();
         return d;
     }
@@ -408,7 +477,7 @@ static class Lib
     static Op Exe(Op op)
     {
         if (op.inp.Length<1) return Log.ExcepWrongParaNum(op,1);
-        Op d=op.inp[0].Copy();
+        Op d=op.inp[0];
         if (d.ExecuteStep())
         {
             return new Op{name="exe",inp=[d]};
@@ -420,11 +489,23 @@ static class Lib
         
     }
 
+    static Op Step(Op op)
+    {
+        if (op.inp.Length<1) return Log.ExcepWrongParaNum(op,1);
+        Op d=op.inp[0];
+        d.ExecuteStep();
+        return d;
+    }
+
     static bool waitStep(Op op,out Op d)
     {
         d=new Op();
         if (op.inp != null)
         {
+            if (op.name == "wait")
+            {
+                return false;
+            }
             if (op.name == "expif" && (op.inp[0].name==true.ToString() || op.inp[0].name==false.ToString()))
             {
                 op.name="if";
@@ -441,7 +522,7 @@ static class Lib
                     return true;
                 }
             }
-            if (op.name == "exp" || op.name == "exe")
+            if (op.name == "exp" || op.name == "exe" || op.name == "step")
             {
                 op.Explain();
                 d=op;
@@ -505,6 +586,35 @@ static class Lib
         return d;
     }
 
+    static Op LookUp(Op op)
+    {
+        if (op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
+        Op[] be=op.inp[0].inp;
+        if (be==null) return Log.ExcepNoItem(op);
+        Op tar=op.inp[1];
+        for(int i = 0; i < be.Length; ++i)
+        {
+            if (be[i].name == tar.name)
+            {
+                Op d=be[i];
+                return d;
+            }
+        }
+        return Log.ExcepNotFound(op);
+    }
+
+    static Op Catch(Op op)
+    {
+        if (op.inp.Length<1) return Log.ExcepWrongParaNum(op,1);
+        return op.inp[0];
+    }
+
+    static Op Raise(Op op)
+    {
+        if (op.inp.Length<1) return Log.ExcepWrongParaNum(op,1);
+        op.name="err";
+        return op;
+    }
     // static Op Make(Op op)
     // {
     //     if (op.inp.Length<3) return Log.ExcepWrongParaNum(op,3);

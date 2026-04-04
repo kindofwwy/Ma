@@ -29,6 +29,11 @@ static class Log
         return Excep(op,$"no_item_inside.");
     }
 
+    public static Op ExcepNotFound(Op op)
+    {
+        return Excep(op,$"not_found.");
+    }
+
     public static Op ExcepIndex(Op op,string some)
     {
         return Excep(op,$"except_int_as_index/but_{some}.");
