@@ -170,7 +170,7 @@ static class Lib
 
     static Op AllEq(Op op)
     {
-        if(op.inp.Length<2) Log.ExcepWrongParaNum(op,2);
+        if(op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
         Op a=op.inp[0];
         Op b=op.inp[1];
         Op d=new Op();
@@ -384,10 +384,10 @@ static class Lib
     static Op At(Op op)
     {
         if (op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
-        else if (op.inp[0].inp==null || op.inp[0].inp.Length==0) return Log.ExcepNoItem(op);
+        Op[]? ops=op.inp[0].inp;
+        if (ops==null || ops.Length==0) return Log.ExcepNoItem(op);
         else if(int.TryParse(op.inp[1].name,out int index))
         {
-            Op[] ops=op.inp[0].inp;
             if(index>ops.Length-1 || index<-ops.Length) return Log.OutOfRange(op,index);
             index=index<0 ? index + ops.Length : index;
             index=index % ops.Length;
@@ -403,10 +403,10 @@ static class Lib
     static Op Set(Op op)
     {
         if (op.inp.Length<3) return Log.ExcepWrongParaNum(op,3);
-        else if (op.inp[0].inp==null || op.inp[0].inp.Length==0) return Log.ExcepNoItem(op);
+        Op[]? ops=op.inp[0].inp;
+        if (ops==null || ops.Length==0) return Log.ExcepNoItem(op);
         else if(int.TryParse(op.inp[1].name,out int index))
         {
-            Op[] ops=op.inp[0].inp;
             if(index>ops.Length-1 || index<-ops.Length) return Log.OutOfRange(op,index);
             index=index<0 ? index + ops.Length : index;
             index=index % ops.Length;
@@ -588,7 +588,7 @@ static class Lib
     static Op LookUp(Op op)
     {
         if (op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
-        Op[] be=op.inp[0].inp;
+        Op[]? be=op.inp[0].inp;
         if (be==null) return Log.ExcepNoItem(op);
         Op tar=op.inp[1];
         for(int i = 0; i < be.Length; ++i)
@@ -616,10 +616,10 @@ static class Lib
     static Op Remove(Op op)
     {
         if (op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
-        else if (op.inp[0].inp==null || op.inp[0].inp.Length==0) return Log.ExcepNoItem(op);
+        Op[]? ops=op.inp[0].inp;
+        if (ops==null || ops.Length==0) return Log.ExcepNoItem(op);
         else if(int.TryParse(op.inp[1].name,out int index))
         {
-            Op[] ops=op.inp[0].inp;
             if(index>ops.Length-1 || index<-ops.Length) return Log.OutOfRange(op,index);
             index=index<0 ? index + ops.Length : index;
             index=index % ops.Length;

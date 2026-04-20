@@ -565,13 +565,12 @@ struct Op
         Op[] form;
         (form,d)=defines[name];
         d=d.Copy();
-        if(inp.Length<form.Length) Log.ExcepWrongParaNum(this,form.Length);
+        if(inp.Length<form.Length) ShallowCopyToThis(Log.ExcepWrongParaNum(this,form.Length));
         else
         {
             d.Replaces(form,inp);
             ShallowCopyToThis(d);
         }
-        
     }
 
     public void ExpLib()
