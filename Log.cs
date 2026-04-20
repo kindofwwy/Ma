@@ -1,21 +1,20 @@
 static class Log
 {
-    static Op Err(string message)
+    public static Op Err(Op[]? inp)
     {
-        return new Op{name="err",inp=[new Op(){name=message}]};
+        return new Op{name="err",inp=inp};
     }
 
     public static Op Excep(string message)
     {
-        Console.WriteLine(message);
-        Console.ReadKey();
-        return Err(message);
+        return Err([new Op(){name=message}]);
     }
 
     public static Op Excep(Op op,string message)
     {
         message=$"from_{op.name}:"+message;
-        Console.WriteLine($"At {op}");
+        Console.WriteLine($"At {op.ToStringB()}");
+        Console.WriteLine(message);
         return Excep(message);
     }
 

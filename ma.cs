@@ -1,6 +1,3 @@
-using System.Diagnostics;
-using System.Linq.Expressions;
-
 static class Ma
 {
     static char[] separator=[' ','\n','\r',','];
@@ -585,10 +582,10 @@ struct Op
 
     bool isNeedAlpha(Op target) //((lam x y ((lam y x (- x y)) x y)) 2 3)
     {
-        if ((name == "def" || name == "lam" || name == "rp" || name == "defn") && inp!=null)
+        if ((name == "def" || name == "lam" || name == "rp" || name == "rpall" || name == "defn") && inp!=null)
         {
             bool ignore=false;
-            int bias=name=="rp"?3:1;
+            int bias=(name=="rp"|| name == "rpall")?3:1;
             for(int i = 0; i < inp.Length-bias; ++i)
             {
                 if (inp[i].name == target.name)

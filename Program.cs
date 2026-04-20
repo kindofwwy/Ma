@@ -59,6 +59,7 @@ class Program
 //((def add2 y (+ ((def add1 x (+ x 1)) y) 1)) 10)
 //((def c x y (if (!= x 0) (c (- x 1) (+ y x)) y)) 10 0)
 //((def feb x (if (= x 0) 0 (if (= x 1) 1 (+ (feb (- x 1)) (feb (- x 2)))))) 10)
+//((def fib n (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2))))) 10)
 //((def feb n ((def febp a b n (if (> n 0) (febp b (+ a b) (- n 1)) a)) 0 1 n)) 10)
 //((def fact n (if (= n 0) 1 (* n (fact (- n 1))))) 10)
 //(((def curry_add x (def addx y (+ x y))) 10) 11)

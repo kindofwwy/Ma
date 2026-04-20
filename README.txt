@@ -1,192 +1,249 @@
+ma语言的程序是由函数组成的。
+函数由2部分组成，名字和参数。
+例如f(x,y)，对于f这个函数而言，f是名字，x和y是参数。
 
-Ma是一个只由函数组成的语言！
+函数可以分成没有参数的函数，和有参数的函数。
+没有参数的函数就是只有函数名的函数，例如f(x)里面的x。
+有参数的函数也包括0个参数的函数，例如f()。
 
-像+或是123、abc在这里都会被视作是函数。
-你可以把它包裹在括号里，来调用它。例如(myfun)就是调用函数myfun。
-你可以在括号内加入更多的函数，用空格隔开它们。例如(myfun hello world)。里面的hello和world是另外的两个函数，我们称它们是myfun的参数。
-函数被调用之后，会根据定义将自身替换成另一个函数。例如(+ 1 2)在调用后会变为3。
-你可以在函数里面加入要调用的函数。例如(+ 1 (+ 2 3))。它在被调用时会先将(+ 2 3)调用，替换成5，即(+ 1 (+ 2 3)) => (+ 1 5)，然后自己再被调用(+ 1 5) => 6。
-你可以使用def函数来定义一个函数。例如(def hello world) => hello。在这之后，当你调用hello，它会被替换成world，(hello) => world。其中hello的部分被称为函数名，world的部分被称为函数体。
-def函数里面可以加入更多的参数。例如(def fun x (havefun x))。在这之后，当你调用fun时，需要补充一个参数来填充x。例如(fun party)，在调用后，函数体(havefun x)里的x会被替换为party。(fun party) => (havefun party)。def里面的x的部分被称为形式参数，而(fun party)里的party的部分被称为实际参数。
-你可以用匿名函数lam来做到类似的事。例如(lam x (havefun x))。不过这个函数没有名字，你需要使用调用函数call来调用它，并把它和它的实际参数填入call里面，例如(call (lam x (havefun x)) party) => (havefun party)。你还可以这么写((lam x (havefun x)) party)，解释器会把它自动转换为前面的写法。
+函数可以分成有定义的函数，和没有定义的函数。
+有定义的函数包括系统自带的函数，还有使用def、defn函数定义的函数。
+除此以外的都是没有定义的函数。
 
+函数可以被解释，或是执行。
+当一个函数被解释，就是根据这个函数的名字和参数，把这个函数的名字和参数进行改变，例如+(1,1)在解释后会变为2。
+这个改变的结果被称为这个函数的返回值。函数返回x，指函数的返回值为x。
+没有定义的函数，和没有参数的函数是不可解释的。
+当一个函数被执行，对于一般执行顺序的函数来说，就是先执行自身的参数，直到自身的参数都是不可解释的函数时，解释自身。
+一些函数有特定的执行顺序。
+不可解释的函数的参数不会被执行。
 
-术语：
-函数：Ma语言的基本组成单位。一个函数的组成包括名字和多个参数。存在已定义的函数和未定义的函数。存在没有参数的函数。
-参数：另一些函数。指(f args)中args的部分。
-已定义的函数：系统函数以及使用def进行定义的函数。
-未定义的函数：包括数字和True、lam等不在已定义函数的范围里的函数。
-函数的调用：调用f，可以这样做(f args)，运行时会使自身替换为自身的输出。如果要调用一个参数数量为0的函数g，可以这样做(g)
-没有参数的函数：当函数不处于被调用的位置时，为没有参数的函数。例如(+ 1 2)里面的1和2。若函数的参数数量为0，但被调用，比如(f)，则视作存在参数，而不是没有参数。
-函数的调用顺序：当已定义函数拥有参数时，会对该函数的参数从左到右进行调用，之后再调用该函数。未定义函数不会被调用。部分函数存在特殊调用顺序。
+系统函数包括：
 
-
-系统函数：
-(def name args body) => name
-定义一个函数。其中args的数量不定（可以取0个）。
-在调用时，会将body里面和args同名的函数按照顺序替换成传入的参数，之后将自身替换为body。
-存在特殊调用顺序：内部不会进行调用。
+call(name,actargs...)
+把name的参数改为actargs，返回name。
+actargs的数量可以是0到多个。
+当name的名字为lam时，如call(lam(lamargs...,lambody),actargs...)，会将lambody中与lamargs同名的函数替换为与lamargs在顺序上对应的actargs，返回lambody。详见替换。
 例子：
-(def add x y (+ x y)) => add ; (add 1 2) => 3 ；(add (- 3 2) (* 1 4)) => (add 1 4) => 5
-(def pi 314) => pi ; (pi) => 314
+call(hello,world) => hello(world)
+call(lam(x,+(x,1)),2) => +(2,1) => 3
 
-(defn name args body) => name
-定义一个函数，在调用这个函数时，它的参数不会被求值。其中args的数量不定（可以取0个）。
-它的性质与def一致，除了在使用被它所定义的函数时，函数的参数不会进行求值。
+if(cond,then,else)
+当cond为True时，返回then。当cond为False时，返回else。
+cond需要是True或False，若非如此，返回err。
+存在特殊的执行顺序，先执行cond，然后解释自身。
 例子：
-(defn delay x (nocall x)) => delay ; (delay (+ 1 2)) => (nocall (+ 1 2))
+if(>(2,1),big,small) => if(True,big,small) => big
 
-(call name args) => (name args)
-调用函数。其中args的数量不定（可以取0个）。
+def(name,args...,body)
+定义一个函数，返回name。
+args的数量可以是0到多个。
+存在特殊的执行顺序，直接解释自身。
 例子：
-(call + 2 3) => (+ 2 3) => 5
+def(hello,x,world(x)) => hello ; hello(ma) => world(ma)
 
-(if cond then else) => then 或 else
-条件判断。
-存在特殊调用顺序：会先调用cond，然后根据cond为True或False将自身替换成then或else。
-
-(+ a b) => c
-(- a b) => c
-(* a b) => c
-(/ a b) => c
-四则运算。其中a和b和c为整数。
-
-(> a b) => True 或 False
-(< a b) => True 或 False
-大小比较。其中a和b为整数。
-
-(= a b) => True 或 False
-判断相等。若a和b名字相同则返回True，否则False。
-(！= a b) => True 或 False
-判断不相等。若a和b名字相同则返回False，否则True。
-
-(eq a b) => True 或 False
-比较两个函数的整体是否相等。会对函数的名字，以及每个子项进行比较。
-存在特殊调用顺序：内部不会进行调用。
-
-(rp args target struct x) => y
-对x内部结构进行替换。rp会使用由args和其它函数组成的target在x里进行从浅到深，从左到右的匹配，并将第一个匹配到的部分替换成由args和其它函数组成的struct，并返回。
-其中target和struct中由args组成的部分会被视为可以匹配任意函数。若args在struct中出现在进行调用的位置，则会无视匹配到的子项，只替换成匹配到的名字。
-存在特殊调用顺序：内部不会进行调用。
+defn(name,args...,body)
+定义一个函数，返回name。被定义的函数将会存在特殊的执行顺序，直接解释自身。
+args的数量可以是0到多个。
+存在特殊的执行顺序，直接解释自身。
 例子：
-(rp a (not a) a (not True)) => True
-(rp x y (+ x y) (- x y) (+ (+ 1 2) (* 3 4))) => (- (+ 1 2) (* 3 4)) => -9
-(rp f x (f x) (x f) (True (not some))) => (not True) => False   #这里的x只会替换名字
+defn(myif,cond,then,else,if(cond,then,else)) => myif ;
+myif(>(2,1),+(1,1),/(1,0)) => if(>(2,1),+(1,1),/(1,0)) => if(True,+(1,1),/(1,0)) => +(1,1) => 2
 
-(len a) => b 或 None
-得到a的子项的项数。若a是一个没有参数的函数，返回None。
+当def、defn被解释后，可以使用name(actargs...)执行被定义的函数。
+当被定义的函数解释时，会将body中的每个与args同名的函数替换为与args在顺序上对应的actargs，返回body。详见替换。
 
-(at a index) => b
-获取a的第index个子项。第一项的index为0，后续依次递增。可以使用-n返回a的倒数第n个子项。
-
-(append a b) => (a b)
-给a添加一个或多个子项。会添加在最右侧。若a没有子项，会添加一个子项。
++、-、*、/(a,b)
+加减乘除四则运算，将a和b的名字视作整数，进行整数的运算，返回运算的结果。
+a和b的名字需要是整数。若a或b为非整数，或在/(a,b)中b为0，会返回err。
 例子：
-(append list 1 2 3) => (list 1 2 3)
++(1,1) => 2
 
-(insert a b) => (b a)
-把a插入b的参数的第一位。若b没有子项，会添加一个子项。
+>、<(a,b)
+大于和小于，将a和b的名字视作整数，进行整数的大小比较，若为真，返回True，否则返回False。
+a和b的名字需要是整数。若a或b为非整数，会返回err。
 例子：
-(insert 1 (list 2 3)) => (list 1 2 3)
+>(2,1) => True
 
-(rename a name) => name
-把a的名字改成name。a的子项会保留。
+=、!=(a,b)
+等于和不等于，对a和b的名字进行比较，若为真，返回True，否则返回False。
 例子：
-(rename (list 1 2 3) d) => (d 1 2 3)
-(rename list (d 1 2 3)) => d
+=(some,some) => True
 
-(rest x) => (x-name x-rest-args)
-获取x除第一项以外的剩余项。
-返回的函数与x的函数名保持一致，返回的参数除了缺少x的第一项以外保持一致。
+len(x)
+测量x的参数数量，返回该值。
+若x为没有参数的函数，值为None。
 例子：
-(rest (list 1 2)) => (list 2)
-(rest (list 2)) => (list)
+len(list(a,b,c)) => 3
+len(list()) => 0
+len(list) => None
 
-(atlist a index) => (list b b-args)
-获取a的第index个子项，获取的结果会被转化为以下的list形式：函数名为list，参数首项为a的第index项的名字，剩下的项为a的第index项的参数的函数。
+at(x,index)
+取出x中的第index个参数，返回x。
+index从0开始，可以使用负数的index取出x的倒数第index个参数。
+x不能是没有参数的函数，或参数数量为0。index的名字需要是整数。index大小需要在[-x的参数数量,x的参数数量)中。否则返回err。
 例子：
-(atlist (numlist 1 2 3) 2) => (list 3)
-(atlist (list (a)) 0) => (list (a))
-(atlist (list (* (+ 1 2) 3)) 0) => (list * (+ 1 2) 3)
+at(list(a,b,c),0) => a
+at(list(a,b,c),-1) => c
 
-(wait x) => y
-停止x内一般函数的求值。
-在wait的参数内，一般的函数会停止求值，除了以下函数：
-(exp x) => y ：对x进行直接求值。
-    例子：
-    (wait (exp (at (+ 1 2) 0))) => (wait 1) => 1
-(exe x) => y ：对x进行彻底求值。即平时的求值顺序，先求值参数，再求值该函数，直到无法进行求值。
-    例子：
-    (wait (exe (+ 1 (+ 2 3)))) => (wait (exe (+ 1 5))) => (wait (exe 6)) => (wait 6) => 6
-(expif cond then else) => then 或 else ：代替一般的if。当cond为True或False时，会立刻替换。
-    例子：
-    (wait (expif True (exp (+ 1 1)) (exp (/ 1 0)))) => (wait (exp (+ 1 1))) => (wait 2) => 2 
-wait会对自身内部的exp和exe按照从左到右，从深到浅的顺序执行。expif的执行顺序为，当cond为True或False时执行。多层时从左至右，从浅至深执行。
-当内部没有以上函数时，会返回内部的值。
-存在特殊调用顺序：内部接管调用。
-
-库函数：
-(first x) => y
-获取x的第一个子项。
+atlist(x,index)
+取出x中的第index个参数，返回以list为名字，以x中的第index个参数的名字，和该参数的参数为参数的函数。
+设x的第index个参数为xname(arg1,arg2...)，那么就会返回list(xname,arg1,arg2...)。
+index从0开始，可以使用负数的index取出x的倒数第index个参数。
+x不能是没有参数的函数，或参数数量为0。index的名字需要是整数。index大小需要在[-x的参数数量,x的参数数量)中。否则会变为err。
 例子：
-(first (list 1 2)) => 1
+atlist(list(+(1,2)),0) => list(+,1,2)
 
-(last x) => y
-获取x的最后一个子项。
+first(x)
+取出x的第一个参数，返回那个参数。
+若x没有参数，返回err。
 例子：
-(first (list 1 2)) => 2
+first(list(1,2,3)) => 1
 
-(and a b) => True 或 False
-逻辑与运算。
-其中a和b为True或False。
-若a值为False，则不会对b进行运算，直接返回False。
+last(x)
+取出x的最后一个参数，返回那个参数。
+若x没有参数，返回err。
+例子：
+last(list(1,2,3)) => 3
 
-(or a b) => True 或 False
-逻辑或运算。
-其中a和b为True或False。
-若a值为True，则不会对b进行运算，直接返回True。
+append(x,item...)
+把item添加至x的参数的最后一位，返回x。
+item的数量可以是1个到多个。
+若x是没有参数的函数，则会把x变成有1个参数的函数，参数为item。
+例子：
+append(list(1,2),3) => list(1,2,3)
+append(list(a),b,c) => list(a,b,c)
 
-(not a) => True 或 False
-逻辑非运算。
-其中a为True或False。
+insert(item,x)
+把item添加至x的参数的第一位，返回x。
+若x是没有参数的函数，则会把x变成有1个参数的函数，参数为item。
+例子：
+insert(1,list(2,3)) => list(1,2,3)
 
-(>= a b) => True 或 False
-(<= a b) => True 或 False
-大于等于以及小于等于。
-其中a和b为整数。
+remove(x,index)
+把x的第index个参数删掉，返回x。
+index从0开始，可以使用负数的index删掉x的倒数第index个参数。
+x不能是没有参数的函数，或参数数量为0。index的名字需要是整数。index大小需要在[-x的参数数量,x的参数数量)中。否则返回err。
+例子：
+remove(list(a,b,c),1) => list(a,c)
 
-约定的未定义函数：
-True
-False
-布尔值。
+rest(x)
+把x的第一个参数删掉，返回x。
+若x没有参数，返回err。
+例子：
+rest(list(1,2,3)) => list(2,3)
 
-None
-作为使用len函数测量一个没有参数的函数的长度时的返回值。
+pop(x)
+把x的最后一个参数删掉，返回x。
+若x没有参数，返回err。
+例子：
+pop(list(1,2,3)) => list(1,2)
+
+set(x,index,item)
+把x的第index个参数变为为item，返回x。
+index从0开始，可以使用负数的index取x的倒数第index个参数。
+x不能是没有参数的函数，或参数数量为0。index的名字需要是整数。index大小需要在[-x的参数数量,x的参数数量)中。否则会变为err。
+例子：
+set(list(a,b,c),0,d) => list(d,b,c)
+
+rename(body,name)
+把body的名字改为name的名字，返回body。
+例子：
+rename(hello(alice),bye) => bye(alice)
+
+lookup(x,target)
+在x的参数里查找和target同名的函数，返回那个函数。
+若x没有参数，或没找到，返回err。
+例子：
+lookup(person(age(20),gender(male)),age) => age(20)
+
+eq(x,y)
+递归地查看x和y的名字，及内部是否完全相同，返回True或False。
+内部指参数，以及参数的参数，等等。
+存在特殊的执行顺序，直接解释自身。
+例子：
+eq(list(a,b(c)),list(a,b(c))) => True
+
+rp(args...,target,struct,body)
+对body内从左到右，从浅到深的第一个匹配上target的函数进行替换，替换为struct，返回body。
+args的数量可以是0到多个。
+target和struct内的作为函数的参数的和args同名的函数会被视为通配符，可以匹配任意的函数，并在替换时替换为对应的函数。
+除args外名字、参数及参数的参数等与target相同的函数会被视作匹配，args会被替换为与被匹配函数中对应位置的函数，然后将struct中的args替换为args对应的函数，再将body中被匹配的函数替换为struct。
+存在特殊的执行顺序，先执行body，再解释自身。
+详见替换。
+例子：
+rp(x,f(x),g(x),list(f(a),f(b))) => list(g(a),f(b))
+
+rpall(args...,target,struct,body)
+对body内每一个匹配上target的函数进行替换，替换为struct，返回body。
+存在特殊的执行顺序，先执行body，再解释自身。
+其余见rp。
+例子：
+rpall(x,f(x),g(x),list(f(a),f(b))) => list(g(a),g(b))
+
+wait(x)
+接管x的执行。x不会进行执行，除了x内的以下几种函数。当x内不包含以下几种函数时，返回x。否则，返回wait(x)。
+exp(x)
+对x进行解释，返回x。
+exe(x)
+对x进行执行，直到x为不可解释的函数，返回x。（实现为若发生1次解释，返回exe(x)，若x不可解释，返回x。）
+step(x)
+对x进行执行，若发生1次解释或x不可解释，返回x。
+expif(cond,then,else)
+只要当cond为True时，返回then。只要当cond为False时，返回else。
+其中exp、exe、step会按照从左到右，由深至浅的顺序进行解释。expif按照从左到右，由浅至深的顺序进行解释。
+不会主动对x中的wait中的以上几种函数进行解释，若x包含wait且wait外无以上几种函数，返回x。若要对x内的wait进行解释，可以把x中的wait放入exp等上述函数中。
+存在特殊的执行顺序，直接解释自身。
+例子：
+wait(exp(at(+(1,1),0))) => wait(1) => 1
+wait(wait(exp(+(1,1)))) => wait(exp(+(1,1))) => wait(2) => 2
+
+catch(x)
+若x的名字为err，将其名字替换为cerr。返回x。
+该函数的解释优先于err的扩散。详见err。
+例子：
+catch(/(1,0)) => catch(err(from_/:division_by_zero)) => cerr(from_/:division_by_zero)
+
+raise(x)
+将自己的名字改为err，返回自己。
+例子：
+raise(mess) => err(mess)
+
+以下是约定的没有定义的函数：
+
+True、False 作为if中的cond及一系列比较函数的返回值。
+
+1、2等数字 作为数字运算函数的参数和部分函数的索引。
+
+None 作为len函数在参数没有参数时的返回值。
+
+list 作为列表用于装载函数。
+
+lam(args...,body)
+在call中作为第一个参数时，可以根据call中的其它参数对body内的和args同名的函数进行替换。详见call和替换。
 
 err
-错误函数。
-当函数在运行时出现问题，会返回err。如果函数的参数中含有err，函数会被替换为err，这种替换优先于任何函数。
+当一个被函数被解释，且内部包含err时，它会跳过解释，变为那个err。
 例子：
-(if True some err) => err
++(1,err) => err
 
-(list name args)
-用来装载函数的结构。
+cerr
+作为被catch捕获的err。
 
-(lam args body)
-(call (lam ...) x) => y
-匿名函数。可以作为call的参数调用。
-在调用时，会将body里面和args同名的函数按照顺序替换成传入的参数。
+以下是其它补充内容：
 
+特殊写法：
+当一个有参数的函数f(x)后面加上括号和参数，形成类似f(x)(y)这样的形式时，这种写法会被转化为call(f(x),y)。
 
-特别写法：
-当调用的函数是一个需要返回后调用的函数时，解释器会自动转换为后面的写法。
-((def f args) some) => (call (def f args) some)
-((lam args) some) => (call (lam args) some)
-
-对于存在特殊调用顺序的函数，若要使用正常调用顺序，可以将它包裹在def里。
+替换：
+替换需要一组替换目标名(args)，和对应的一组替换物函数(actargs)，以及一个被替换的函数。
+替换时，会遍历被替换的函数里的每一个函数，找到每一个名字与args匹配的函数。
+以下假设名字与args匹配的函数为arg'：
+当arg'没有参数时，会直接替换成对应actargs。
+当arg'有参数时，且actargs没有参数时，会把arg'的名字替换为actargs的名字。
+当arg'有参数时，且actargs有参数时，会把arg'替换为call(actargs,arg'的参数)。
+当arg'是def、defn、lam、rp、rpall函数中的args...或name参数时，不会对它以及这个函数的内部进行替换。
+注意，在对rp、rpall解释时，可以对def、defn、lam、rp、rpall函数中的args...或name参数进行替换。
 例子：
-(def make-list x y (list x y)) ; (make-list (+ 1 2) 4) => (list 3 4)
-
-对于希望不进行调用的函数，可以将它包裹在一个未定义函数里。
-例子：
-(nocall (+ 1 2)) #(+ 1 2)不会被调用
+lam(x,y,lam(y,x,-(x,y))(x,y))(2,3) => call(lam(y,x,-(x,y)),2,3) => -(3,2) => 1
+rpall(x,y,lam(x,y,+(x,y))) => lam(y,y,+(y,y))

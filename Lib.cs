@@ -38,12 +38,15 @@ static class Lib
         lib["rename"]=Rename;
         lib["atlist"]=atList;
         lib["lookup"]=LookUp;
+        lib["remove"]=Remove;
 
         lib["wait"]=Wait;
         lib["exp"]=Exp;
         lib["exe"]=Exe;
         lib["step"]=Step;
 
+        lib["first"]=First;
+        lib["last"]=Last;
         lib["rest"]=Rest;
         lib["insert"]=Insert;
         lib["pop"]=Pop;
@@ -55,16 +58,12 @@ static class Lib
     static Op Def(Op op)
     {
         if(op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
-        Op d=new Op();
-        d.name=op.inp[0].name;
+        Op d=op.inp[0];
         Op[] form=[];
         if (op.inp.Length > 2)
         {
             form=new Op[op.inp.Length-2];
-            for(int i = 1; i < op.inp.Length - 1; ++i)
-            {
-                form[i-1]=op.inp[i];
-            }
+            Array.Copy(op.inp,1,form,0,form.Length);
         }
         Op define=op.inp[op.inp.Length-1];
         Op.defines[d.name]=(form,define);
@@ -102,7 +101,7 @@ static class Lib
     static Op If(Op op)
     {
         if(op.inp.Length<3) return Log.ExcepWrongParaNum(op,3);
-        Op d=new Op();
+        Op d;
         if (op.inp[0].name == true.ToString())
         {
             d=op.inp[1];
@@ -611,9 +610,47 @@ static class Lib
 
     static Op Raise(Op op)
     {
+        return Log.Err(op.inp);
+    }
+
+    static Op Remove(Op op)
+    {
+        if (op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
+        else if (op.inp[0].inp==null || op.inp[0].inp.Length==0) return Log.ExcepNoItem(op);
+        else if(int.TryParse(op.inp[1].name,out int index))
+        {
+            Op[] ops=op.inp[0].inp;
+            if(index>ops.Length-1 || index<-ops.Length) return Log.OutOfRange(op,index);
+            index=index<0 ? index + ops.Length : index;
+            index=index % ops.Length;
+            Op[] newinp=new Op[ops.Length-1];
+            Array.Copy(ops,0,newinp,0,index);
+            Array.Copy(ops,index+1,newinp,index,ops.Length-index-1);
+
+            op=op.inp[0];
+            op.inp=newinp;
+            return op;
+        }
+        else
+        {
+            return Log.ExcepIndex(op,op.inp[1].ToString());
+        }
+    }
+
+    static Op First(Op op)
+    {
         if (op.inp.Length<1) return Log.ExcepWrongParaNum(op,1);
-        op.name="err";
-        return op;
+        Op d=op.inp[0];
+        if (d.inp==null || d.inp.Length==0) return Log.ExcepNoItem(op);
+        else return d.inp[0];
+    }
+
+    static Op Last(Op op)
+    {
+        if (op.inp.Length<1) return Log.ExcepWrongParaNum(op,1);
+        Op d=op.inp[0];
+        if (d.inp==null || d.inp.Length==0) return Log.ExcepNoItem(op);
+        else return d.inp[d.inp.Length-1];
     }
     // static Op Make(Op op)
     // {
