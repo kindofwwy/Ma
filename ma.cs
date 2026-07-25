@@ -167,7 +167,8 @@ static class Ma
         }
         else
         {
-            op.name=codes[0];
+            if (codes.Count==0) op.name="None";
+            else op.name=codes[0];
             op.inp=null;
         }
         return op;
@@ -198,7 +199,7 @@ static class Ma
             else if (code[i] == ')')
             {
                 quotenum--;
-                if (quotenum == 0 && tempcode!="")
+                if (quotenum == 0 && tempcode!="" && (!(i<code.Length-1) || code[i+1]!='(')) //some(...)(...) nocut
                 {
                     codes.Add(tempcode+")");
                     tempcode="";
@@ -210,13 +211,19 @@ static class Ma
                 jump=true;
                 continue;
             }
-            else if (jump && code[i] == '\n')
+            else if (jump && (code[i] == '\n' || code[i]=='\r'))
             {
                 jump=false;
                 continue;
             }
+            else if((code[i] == '\n' || code[i]=='\r') && quotenum == 0 && tempcode!="")
+            {
+                codes.Add(tempcode);
+                tempcode="";
+                continue;
+            }
 
-            if (!jump)
+            if (!jump && !(code[i] == '\n' || code[i]=='\r'))
             {
                 tempcode+=code[i];
             }
