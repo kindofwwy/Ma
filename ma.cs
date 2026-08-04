@@ -1,6 +1,12 @@
 static class Ma
 {
     static char[] separator=[' ','\n','\r',','];
+
+    public static bool isSeparator(char a)
+    {
+        return Array.Exists<char>(separator,(char x)=>x==a);
+    }
+
     static List<string> Cut(string code)    //for (+ 1 2)
     {
         List<string> output=[];
@@ -11,7 +17,7 @@ static class Ma
             if (code[i] == '(') ++ jumpflag;
             if (code[i] == ')') -- jumpflag;
 
-            if(jumpflag==0 && Array.Exists<char>(separator,(char x)=>x==code[i])) 
+            if(jumpflag==0 && isSeparator(code[i])) 
             {
                 if(temp.Length!=0)
                     output.Add(temp);
@@ -186,6 +192,14 @@ static class Ma
 
     public static List<string> CutCode(string code)
     {
+        bool isallSepOrPar(string x)
+        {
+            for(int i = 0; i < x.Length; ++i)
+            {
+                if(!(isSeparator(x[i]) || x[i]=='(' || x[i]==')')) return false;
+            }
+            return true;
+        }
         List<string> codes=[];
         string tempcode="";
         int quotenum=0;
@@ -216,7 +230,7 @@ static class Ma
                 jump=false;
                 continue;
             }
-            else if((code[i] == '\n' || code[i]=='\r') && quotenum == 0 && tempcode!="")
+            else if(isSeparator(code[i]) && quotenum == 0 && tempcode!="")
             {
                 codes.Add(tempcode);
                 tempcode="";
@@ -228,6 +242,7 @@ static class Ma
                 tempcode+=code[i];
             }
         }
+        if(!isallSepOrPar(tempcode)) codes.Add(tempcode);
         return codes;
     }
 
