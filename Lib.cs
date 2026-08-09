@@ -100,7 +100,7 @@ static class Lib
 
     static Op If(Op op)
     {
-        if(op.inp.Length<3) return Log.ExcepWrongParaNum(op,3);
+        if(op.inp.Length!=3) return Log.ExcepWrongParaNumExact(op,3);
         Op d;
         if (op.inp[0].name == true.ToString())
         {
@@ -121,7 +121,7 @@ static class Lib
     {
         Op dya(Op op)
         {
-            if(op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
+            if(op.inp.Length!=2) return Log.ExcepWrongParaNumExact(op,2);
             Op d=new Op();
             if(int.TryParse(op.inp[0].name,out int a))
             {
@@ -138,7 +138,7 @@ static class Lib
 
     static Op Div(Op op)
     {
-        if(op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
+        if(op.inp.Length!=2) return Log.ExcepWrongParaNumExact(op,2);
         if(op.inp[1].name=="0") return Log.Excep(op,"division_by_zero");
         Op d=Dyadic((int x,int y)=>x/y)(op);
         return d;
@@ -148,7 +148,7 @@ static class Lib
     {
         Op dya(Op op)
         {   
-            if(op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
+            if(op.inp.Length!=2) return Log.ExcepWrongParaNumExact(op,2);
             Op d=new Op();
             d.name=func(op.inp[0].name,op.inp[1].name).ToString() ?? "None";
             return d;
@@ -160,7 +160,7 @@ static class Lib
     {
         Op mon(Op op)
         {
-            if(op.inp.Length<1) return Log.ExcepWrongParaNum(op,1);
+            if(op.inp.Length!=1) return Log.ExcepWrongParaNumExact(op,1);
             Op d=new Op();
             d.name=func(op.inp[0].name).ToString() ?? "None";
             return d;
@@ -170,7 +170,7 @@ static class Lib
 
     static Op AllEq(Op op)
     {
-        if(op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
+        if(op.inp.Length!=2) return Log.ExcepWrongParaNumExact(op,2);
         Op a=op.inp[0];
         Op b=op.inp[1];
         Op d=new Op();
@@ -356,7 +356,7 @@ static class Lib
 
     static Op strAt(Op op)
     {
-        if (op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
+        if (op.inp.Length!=2) return Log.ExcepWrongParaNumExact(op,2);
         string name=op.inp[0].name;
         if(int.TryParse(op.inp[1].name,out int index))
         {
@@ -372,7 +372,8 @@ static class Lib
 
     static Op Len(Op op)
     {
-        if (op.inp != null && op.inp[0].inp != null)
+        if (op.inp.Length!=1) return Log.ExcepWrongParaNumExact(op,1);
+        if (op.inp[0].inp != null)
         {
             Op d=new Op();
             d.name=op.inp[0].inp.Length.ToString();
@@ -383,7 +384,7 @@ static class Lib
 
     static Op At(Op op)
     {
-        if (op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
+        if (op.inp.Length!=2) return Log.ExcepWrongParaNumExact(op,2);
         Op[]? ops=op.inp[0].inp;
         if (ops==null || ops.Length==0) return Log.ExcepNoItem(op);
         else if(int.TryParse(op.inp[1].name,out int index))
@@ -402,7 +403,7 @@ static class Lib
 
     static Op Set(Op op)
     {
-        if (op.inp.Length<3) return Log.ExcepWrongParaNum(op,3);
+        if (op.inp.Length!=3) return Log.ExcepWrongParaNumExact(op,3);
         Op[]? ops=op.inp[0].inp;
         if (ops==null || ops.Length==0) return Log.ExcepNoItem(op);
         else if(int.TryParse(op.inp[1].name,out int index))
@@ -444,7 +445,7 @@ static class Lib
 
     static Op Rename(Op op)
     {
-        if (op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
+        if (op.inp.Length!=2) return Log.ExcepWrongParaNumExact(op,2);
         Op body=op.inp[0];
         body.name=op.inp[1].name;
         return body;
@@ -452,7 +453,7 @@ static class Lib
 
     static Op atList(Op op)
     {
-        if (op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
+        if (op.inp.Length!=2) return Log.ExcepWrongParaNumExact(op,2);
         Op d=At(op);
         if(d.inp==null || d.inp.Length==0) return new Op(){name="list",inp=[d]};
         Op d2=new Op(){name="list"};
@@ -467,7 +468,7 @@ static class Lib
 
     static Op Exp(Op op)
     {
-        if (op.inp.Length<1) return Log.ExcepWrongParaNum(op,1);
+        if (op.inp.Length!=1) return Log.ExcepWrongParaNumExact(op,1);
         Op d=op.inp[0];
         d.Explain();
         return d;
@@ -475,7 +476,7 @@ static class Lib
 
     static Op Exe(Op op)
     {
-        if (op.inp.Length<1) return Log.ExcepWrongParaNum(op,1);
+        if (op.inp.Length!=1) return Log.ExcepWrongParaNumExact(op,1);
         Op d=op.inp[0];
         if (d.ExecuteStep())
         {
@@ -490,7 +491,7 @@ static class Lib
 
     static Op Step(Op op)
     {
-        if (op.inp.Length<1) return Log.ExcepWrongParaNum(op,1);
+        if (op.inp.Length!=1) return Log.ExcepWrongParaNumExact(op,1);
         Op d=op.inp[0];
         d.ExecuteStep();
         return d;
@@ -533,7 +534,7 @@ static class Lib
 
     static Op Wait(Op op)
     {
-        if (op.inp.Length<1) return Log.ExcepWrongParaNum(op,1);
+        if (op.inp.Length!=1) return Log.ExcepWrongParaNumExact(op,1);
         if (waitStep(op.inp[0],out Op d))
         {
             return new Op{name="wait",inp=[d]};
@@ -547,7 +548,7 @@ static class Lib
 
     static Op Rest(Op op)
     {
-        if (op.inp.Length<1) return Log.ExcepWrongParaNum(op,1);
+        if (op.inp.Length!=1) return Log.ExcepWrongParaNumExact(op,1);
         Op be=op.inp[0];
         if (be.inp==null || be.inp.Length==0) return Log.ExcepNoItem(op);
         Op d=new Op(){name=be.name};
@@ -558,7 +559,7 @@ static class Lib
 
     static Op Insert(Op op)
     {
-        if (op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
+        if (op.inp.Length!=2) return Log.ExcepWrongParaNumExact(op,2);
         Op d=new Op(){name=op.inp[1].name};
         Op be=op.inp[1];
         if (be.inp != null)
@@ -576,7 +577,7 @@ static class Lib
 
     static Op Pop(Op op)
     {
-        if (op.inp.Length<1) return Log.ExcepWrongParaNum(op,1);
+        if (op.inp.Length!=1) return Log.ExcepWrongParaNumExact(op,1);
         Op be=op.inp[0];
         if (be.inp == null || be.inp.Length == 0) return Log.ExcepNoItem(op);
         Op d=new Op(){name=be.name};
@@ -587,7 +588,7 @@ static class Lib
 
     static Op LookUp(Op op)
     {
-        if (op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
+        if (op.inp.Length!=2) return Log.ExcepWrongParaNumExact(op,2);
         Op[]? be=op.inp[0].inp;
         if (be==null) return Log.ExcepNoItem(op);
         Op tar=op.inp[1];
@@ -604,7 +605,7 @@ static class Lib
 
     static Op Catch(Op op)
     {
-        if (op.inp.Length<1) return Log.ExcepWrongParaNum(op,1);
+        if (op.inp.Length!=1) return Log.ExcepWrongParaNumExact(op,1);
         return op.inp[0];
     }
 
@@ -615,7 +616,7 @@ static class Lib
 
     static Op Remove(Op op)
     {
-        if (op.inp.Length<2) return Log.ExcepWrongParaNum(op,2);
+        if (op.inp.Length!=2) return Log.ExcepWrongParaNumExact(op,2);
         Op[]? ops=op.inp[0].inp;
         if (ops==null || ops.Length==0) return Log.ExcepNoItem(op);
         else if(int.TryParse(op.inp[1].name,out int index))
@@ -639,7 +640,7 @@ static class Lib
 
     static Op First(Op op)
     {
-        if (op.inp.Length<1) return Log.ExcepWrongParaNum(op,1);
+        if (op.inp.Length!=1) return Log.ExcepWrongParaNumExact(op,1);
         Op d=op.inp[0];
         if (d.inp==null || d.inp.Length==0) return Log.ExcepNoItem(op);
         else return d.inp[0];
@@ -647,7 +648,7 @@ static class Lib
 
     static Op Last(Op op)
     {
-        if (op.inp.Length<1) return Log.ExcepWrongParaNum(op,1);
+        if (op.inp.Length!=1) return Log.ExcepWrongParaNumExact(op,1);
         Op d=op.inp[0];
         if (d.inp==null || d.inp.Length==0) return Log.ExcepNoItem(op);
         else return d.inp[d.inp.Length-1];

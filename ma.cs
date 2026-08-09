@@ -421,6 +421,7 @@ struct Op
 
     public void Explain()
     {
+        if(inp==null) return;
         int errind=Array.FindIndex<Op>(inp,(Op x) => x.name == "err");
         if(errind!=-1)
         {
@@ -583,11 +584,12 @@ struct Op
 
     public void ExpDic()
     {
+        if(inp==null) return;
         Op d;
         Op[] form;
         (form,d)=defines[name];
         d=d.Copy();
-        if(inp.Length<form.Length) ShallowCopyToThis(Log.ExcepWrongParaNum(this,form.Length));
+        if(inp.Length!=form.Length) ShallowCopyToThis(Log.ExcepWrongParaNumExact(this,form.Length));
         else
         {
             d.Replaces(form,inp);

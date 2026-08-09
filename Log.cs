@@ -23,6 +23,11 @@ static class Log
         return Excep(op,$"except_number_of_parameters_at_least_{exceptNum}/_but_receive_{op.inp.Length}.");
     }
 
+    public static Op ExcepWrongParaNumExact(Op op,int exceptNum)
+    {
+        return Excep(op,$"except_number_of_parameters_{exceptNum}/_but_receive_{op.inp.Length}.");
+    }
+
     public static Op ExcepNoItem(Op op)
     {
         return Excep(op,$"no_item_inside.");
